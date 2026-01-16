@@ -3,11 +3,13 @@
  * Provides centralized Firebase initialization and helper functions
  */
 
+import app from '@react-native-firebase/app';
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import firestore, {
   FirebaseFirestoreTypes,
 } from '@react-native-firebase/firestore';
 import storage, {FirebaseStorageTypes} from '@react-native-firebase/storage';
+import {config} from '@utils/config';
 import {
   User,
   Partnership,
@@ -19,6 +21,20 @@ import {
   GameScore,
   PhotoPrompt,
 } from '@utils/types';
+
+// Initialize Firebase app (auto-initialized from native config, but verify)
+if (!app().apps.length) {
+  // If not auto-initialized, initialize with config from environment
+  // Note: React Native Firebase typically auto-initializes from native config files
+  // This is a fallback if needed
+  console.warn('Firebase app not auto-initialized. Check native configuration files.');
+}
+
+// Verify Firebase configuration is available
+const firebaseApp = app();
+if (!firebaseApp.options.projectId && config.FIREBASE_PROJECT_ID) {
+  console.warn('Firebase config may not be properly loaded from native files.');
+}
 
 // Enable offline persistence
 firestore().settings({

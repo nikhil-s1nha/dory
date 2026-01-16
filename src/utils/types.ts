@@ -94,6 +94,7 @@ export interface Message {
   mediaUrl?: string;
   reactions?: Reaction[];
   questionId?: string;
+  deleted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
