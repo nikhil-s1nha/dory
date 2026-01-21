@@ -1,0 +1,74 @@
+[
+  {
+    "id": "deep",
+    "name": "Deep Conversations",
+    "description": "Meaningful questions to strengthen your connection",
+    "category": "deep",
+    "icon": "💭",
+    "color": "#FF6B6B",
+    "questionCount": 25
+  },
+  {
+    "id": "lighthearted",
+    "name": "Lighthearted Fun",
+    "description": "Playful questions for everyday moments",
+    "category": "lighthearted",
+    "icon": "😊",
+    "color": "#4ECDC4",
+    "questionCount": 30
+  },
+  {
+    "id": "nostalgia",
+    "name": "Nostalgia",
+    "description": "Reminisce about your journey together",
+    "category": "nostalgia",
+    "icon": "📸",
+    "color": "#FFE66D",
+    "questionCount": 20
+  },
+  {
+    "id": "future_planning",
+    "name": "Future Planning",
+    "description": "Dream and plan ahead together",
+    "category": "future_planning",
+    "icon": "🌟",
+    "color": "#9B59B6",
+    "questionCount": 22
+  },
+  {
+    "id": "gratitude",
+    "name": "Gratitude",
+    "description": "Express appreciation for each other",
+    "category": "gratitude",
+    "icon": "🙏",
+    "color": "#51CF66",
+    "questionCount": 18
+  },
+  {
+    "id": "growth",
+    "name": "Personal Growth",
+    "description": "Explore how you've grown together",
+    "category": "growth",
+    "icon": "🌱",
+    "color": "#3498DB",
+    "questionCount": 20
+  },
+  {
+    "id": "get_to_know_you",
+    "name": "Get to Know You",
+    "description": "Discover new things about each other",
+    "category": "get_to_know_you",
+    "icon": "💡",
+    "color": "#FF9800",
+    "questionCount": 28
+  },
+  {
+    "id": "seasonal",
+    "name": "Seasonal",
+    "description": "Questions that change with the seasons",
+    "category": "seasonal",
+    "icon": "🍂",
+    "color": "#E74C3C",
+    "questionCount": 15
+  }
+]

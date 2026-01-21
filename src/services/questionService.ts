@@ -6,6 +6,7 @@
 import {
   questionsCollection,
   answersCollection,
+  partnershipsCollection,
   generateId,
   getTimestamp,
   firebaseFirestore,
@@ -14,7 +15,7 @@ import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
 import {getPartnership} from './partnershipService';
 import {Question, Answer, Partnership} from '@utils/types';
 import {FirestoreError, getErrorMessage} from '@utils/errors';
-import {getPartnership} from './partnershipService';
+import {sendPartnerAnsweredNotification} from './notificationService';
 
 /**
  * Get questions with optional filtering
@@ -111,24 +112,66 @@ export async function submitAnswer(
   answer: Omit<Answer, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<Answer> {
   try {
-    const answerId = generateId();
+    // Check if user already has an answer for this question
+    const existingAnswers = await getAnswers(answer.questionId, answer.partnershipId);
+    const existingAnswer = existingAnswers.find(a => a.userId === answer.userId);
+
     const now = new Date().toISOString();
+    let answerData: Answer;
 
-    const answerData: Answer = {
-      ...answer,
-      id: answerId,
-      isRevealed: false,
-      createdAt: now,
-      updatedAt: now,
-    };
+    if (existingAnswer) {
+      // Update existing answer
+      answerData = await updateAnswer(existingAnswer.id, {
+        text: answer.text,
+        type: answer.type,
+        mediaUrl: answer.mediaUrl,
+        isRevealed: false,
+      });
+    } else {
+      // Create new answer
+      const answerId = generateId();
+      answerData = {
+        ...answer,
+        id: answerId,
+        isRevealed: false,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    await answersCollection.doc(answerId).set(answerData);
+      await answersCollection.doc(answerId).set(answerData);
+    }
 
-    // Check if both partners have answered
-    const answers = await getAnswers(answer.questionId, answer.partnershipId);
-    if (answers.length === 2) {
+    // Get all answers after update/create
+    const allAnswers = await getAnswers(answer.questionId, answer.partnershipId);
+    
+    // Verify that we have exactly 2 unique users before revealing
+    const uniqueUserIds = new Set(allAnswers.map(a => a.userId));
+    if (uniqueUserIds.size === 2) {
       // Both partners have answered, reveal answers
       await revealAnswers(answer.questionId, answer.partnershipId);
+
+      // Send notifications to both partners (non-blocking)
+      try {
+        const questionDoc = await questionsCollection.doc(answer.questionId).get();
+        const question = questionDoc.data() as Question;
+        const questionText = question?.text || 'the question';
+
+        const partnership = await getPartnership(answer.partnershipId);
+        if (partnership) {
+          const senderDoc = await (await import('./firebase')).usersCollection.doc(answer.userId).get();
+          const sender = senderDoc.data();
+          const senderName = sender?.name || 'Your partner';
+
+          // Notify the other partner
+          const partnerId = partnership.userId1 === answer.userId ? partnership.userId2 : partnership.userId1;
+          if (partnerId) {
+            await sendPartnerAnsweredNotification(partnerId, senderName, questionText, answer.questionId, answer.partnershipId);
+          }
+        }
+      } catch (error) {
+        // Don't fail answer submission if notification fails
+        console.error('Error sending partner answered notification:', error);
+      }
     }
 
     return answerData;

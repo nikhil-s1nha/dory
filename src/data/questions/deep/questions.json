@@ -1,0 +1,202 @@
+[
+  {
+    "id": "deep_001",
+    "text": "After all these years, what's something we could improve in our relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "deep_002",
+    "text": "What fears do you have about our future together?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "deep_003",
+    "text": "What's something I do that makes you feel most loved?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "deep_004",
+    "text": "How do you think we've changed each other for the better?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "deep_005",
+    "text": "What's a difficult conversation we need to have but haven't yet?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "deep_006",
+    "text": "What does true intimacy mean to you?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "deep_007",
+    "text": "How do you want to be supported when you're going through a hard time?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "deep_008",
+    "text": "What boundaries do we need to set to protect our relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "deep_009",
+    "text": "What's something you wish I understood better about you?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "deep_010",
+    "text": "How do you define success in a relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "deep_011",
+    "text": "What's the biggest lesson you've learned from our relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "deep_012",
+    "text": "How do you handle conflicts, and what can I do to support you during disagreements?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "deep_013",
+    "text": "What does trust mean to you, and how can we build more of it?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "deep_014",
+    "text": "What role does vulnerability play in our relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "deep_015",
+    "text": "How do you envision our relationship five years from now?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "deep_016",
+    "text": "What's something you've never told me but want to share?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "deep_017",
+    "text": "How do you want to grow as an individual while staying connected as a couple?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "deep_018",
+    "text": "What makes you feel most secure in our relationship?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "deep_019",
+    "text": "How do we balance independence with togetherness?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "deep_020",
+    "text": "What's your love language, and how can I show love in ways that resonate with you?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-20T00:00:00Z"
+  },
+  {
+    "id": "deep_021",
+    "text": "What does commitment mean to you?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-21T00:00:00Z"
+  },
+  {
+    "id": "deep_022",
+    "text": "How do we maintain our connection during stressful times?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-22T00:00:00Z"
+  },
+  {
+    "id": "deep_023",
+    "text": "What's something you admire about how I handle difficult situations?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-23T00:00:00Z"
+  },
+  {
+    "id": "deep_024",
+    "text": "How can we create more space for meaningful conversations?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-24T00:00:00Z"
+  },
+  {
+    "id": "deep_025",
+    "text": "What legacy do you want our relationship to leave?",
+    "category": "deep",
+    "type": "text",
+    "deckId": "deep",
+    "createdAt": "2024-01-25T00:00:00Z"
+  }
+]

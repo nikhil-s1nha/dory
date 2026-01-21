@@ -1,0 +1,122 @@
+[
+  {
+    "id": "seasonal_001",
+    "text": "What's your favorite thing about this season?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "seasonal_002",
+    "text": "What's a seasonal tradition you'd love to start together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "seasonal_003",
+    "text": "How do you want to celebrate the holidays together this year?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "seasonal_004",
+    "text": "What's your favorite memory from this time of year?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "seasonal_005",
+    "text": "What's something you'd like to do together before this season ends?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "seasonal_006",
+    "text": "How do you want to welcome the new season together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "seasonal_007",
+    "text": "What's a seasonal activity you've never tried but want to?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "seasonal_008",
+    "text": "What does this time of year mean to you?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "seasonal_009",
+    "text": "What's a seasonal food or drink you associate with us?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "seasonal_010",
+    "text": "How do the seasons affect your mood, and how can I support you during different times?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "seasonal_011",
+    "text": "What's a way you'd like to celebrate the changing seasons together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "seasonal_012",
+    "text": "What's your favorite thing about how we spend time together during this season?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "seasonal_013",
+    "text": "What's a seasonal goal you want us to accomplish together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "seasonal_014",
+    "text": "How do you want to make the most of this season together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "seasonal_015",
+    "text": "What's something about this season that brings us closer together?",
+    "category": "seasonal",
+    "type": "text",
+    "deckId": "seasonal",
+    "createdAt": "2024-01-15T00:00:00Z"
+  }
+]

@@ -9,6 +9,7 @@ import {
 } from './firebase';
 import {Countdown} from '@utils/types';
 import {FirestoreError, getErrorMessage} from '@utils/errors';
+import {updateCountdownWidget} from './widgetService';
 
 /**
  * Create a countdown
@@ -28,6 +29,10 @@ export async function createCountdown(
     };
 
     await countdownsCollection.doc(countdownId).set(countdownData);
+    
+    // Update widget
+    const allCountdowns = await getCountdowns(countdown.partnershipId);
+    await updateCountdownWidget(allCountdowns);
 
     return countdownData;
   } catch (error: any) {
@@ -71,7 +76,13 @@ export async function updateCountdown(
     await countdownsCollection.doc(countdownId).update(updateData);
 
     const updatedDoc = await countdownsCollection.doc(countdownId).get();
-    return updatedDoc.data() as Countdown;
+    const updatedCountdown = updatedDoc.data() as Countdown;
+    
+    // Update widget
+    const allCountdowns = await getCountdowns(updatedCountdown.partnershipId);
+    await updateCountdownWidget(allCountdowns);
+    
+    return updatedCountdown;
   } catch (error: any) {
     const message = getErrorMessage(error);
     throw new FirestoreError(message, error.code || 'unknown', error);
@@ -83,7 +94,17 @@ export async function updateCountdown(
  */
 export async function deleteCountdown(countdownId: string): Promise<void> {
   try {
+    // Get countdown to get partnershipId before deleting
+    const countdownDoc = await countdownsCollection.doc(countdownId).get();
+    const countdown = countdownDoc.data() as Countdown;
+    
     await countdownsCollection.doc(countdownId).delete();
+    
+    // Update widget
+    if (countdown) {
+      const allCountdowns = await getCountdowns(countdown.partnershipId);
+      await updateCountdownWidget(allCountdowns);
+    }
   } catch (error: any) {
     const message = getErrorMessage(error);
     throw new FirestoreError(message, error.code || 'unknown', error);

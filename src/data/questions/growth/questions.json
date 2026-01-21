@@ -1,0 +1,162 @@
+[
+  {
+    "id": "growth_001",
+    "text": "How have you grown since we've been together?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "growth_002",
+    "text": "What's a belief or opinion you've changed since being with me?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "growth_003",
+    "text": "How have I helped you become more confident?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "growth_004",
+    "text": "What's a habit you've improved since we've been together?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "growth_005",
+    "text": "How have we grown together as a couple?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "growth_006",
+    "text": "What's something you've learned about yourself through our relationship?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "growth_007",
+    "text": "How have I challenged you to grow?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "growth_008",
+    "text": "What's a perspective you've gained from being with me?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "growth_009",
+    "text": "How has our relationship helped you face your fears?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "growth_010",
+    "text": "What's an area where you still want to grow, and how can I support you?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "growth_011",
+    "text": "How have we learned to communicate better together?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "growth_012",
+    "text": "What's a way you've become more patient or understanding?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "growth_013",
+    "text": "How have I helped you see yourself in a better light?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "growth_014",
+    "text": "What's a goal you've achieved because of our relationship?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "growth_015",
+    "text": "How have we grown in how we handle conflicts?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "growth_016",
+    "text": "What's something you've overcome with my support?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "growth_017",
+    "text": "How have we learned to balance our individual growth with our relationship?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "growth_018",
+    "text": "What's a lesson from our relationship that you'll carry forward?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "growth_019",
+    "text": "How have we grown in expressing our needs to each other?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "growth_020",
+    "text": "What's a way you've become more empathetic because of our relationship?",
+    "category": "growth",
+    "type": "text",
+    "deckId": "growth",
+    "createdAt": "2024-01-20T00:00:00Z"
+  }
+]

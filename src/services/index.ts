@@ -19,6 +19,7 @@ export * from './messageService';
 
 // Canvas
 export * from './canvasService';
+export * from './canvasSync';
 
 // Photo Prompts
 export * from './photoPromptService';
@@ -28,3 +29,18 @@ export * from './countdownService';
 
 // Game Scores
 export * from './gameScoreService';
+
+// Notification Settings
+export * from './notificationSettings';
+
+// Privacy Settings
+export * from './privacySettings';
+
+// Streaks
+export * from './streaks';
+
+// Date Ideas
+export * from './dateIdeasService';
+
+// Referrals
+export * from './referralService';

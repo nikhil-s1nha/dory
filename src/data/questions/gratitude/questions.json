@@ -1,0 +1,146 @@
+[
+  {
+    "id": "gratitude_001",
+    "text": "What do you appreciate most in our daily life that you didn't before?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "gratitude_002",
+    "text": "What's something I did recently that made you feel grateful?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "gratitude_003",
+    "text": "What quality in me are you most thankful for?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "gratitude_004",
+    "text": "How has our relationship made your life better?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "gratitude_005",
+    "text": "What's something small I do that you're grateful for?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "gratitude_006",
+    "text": "What's a way I support you that you appreciate?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "gratitude_007",
+    "text": "What moment from this week are you grateful we shared?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "gratitude_008",
+    "text": "What's something about our relationship that you don't take for granted?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "gratitude_009",
+    "text": "How do you want to express more gratitude in our relationship?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "gratitude_010",
+    "text": "What's a challenge we faced together that you're grateful for?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "gratitude_011",
+    "text": "What's something I taught you that you're thankful for?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "gratitude_012",
+    "text": "What's a way we've grown together that you appreciate?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "gratitude_013",
+    "text": "What's something about me that makes you feel lucky?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "gratitude_014",
+    "text": "What's a memory you're grateful we created together?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "gratitude_015",
+    "text": "What's something I do for our relationship that you value?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "gratitude_016",
+    "text": "How has our relationship helped you become a better person?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "gratitude_017",
+    "text": "What's a way I make your life easier that you appreciate?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "gratitude_018",
+    "text": "What's something about us together that you're thankful for?",
+    "category": "gratitude",
+    "type": "text",
+    "deckId": "gratitude",
+    "createdAt": "2024-01-18T00:00:00Z"
+  }
+]

@@ -12,6 +12,8 @@ import {subscribeToMessages} from '@services/messageService';
 import {subscribeToCanvas} from '@services/canvasService';
 import {subscribeToCountdowns} from '@services/countdownService';
 import {getDailyPrompt, subscribeToPhotoPrompt} from '@services/photoPromptService';
+import {updateDailyPhotoWidget} from '@services/widgetService';
+import {getUserById} from '@services/authService';
 import {useAuthStore} from '@store/authSlice';
 import {usePartnershipStore} from '@store/partnershipSlice';
 import {Partnership, Message, CanvasDrawing, Countdown, PhotoPrompt} from '@utils/types';
@@ -100,14 +102,30 @@ export function useRealtimeSync(
 
       // Get and subscribe to daily photo prompt
       getDailyPrompt(partnershipId)
-        .then(prompt => {
+        .then(async prompt => {
           setDailyPhotoPrompt(prompt);
           if (prompt) {
             const unsubscribePhotoPrompt = subscribeToPhotoPrompt(
               prompt.id,
-              promptData => {
+              async promptData => {
                 if (promptData) {
                   setDailyPhotoPrompt(promptData);
+                  
+                  // Update widget when prompt changes (including partner uploads)
+                  const partnership = usePartnershipStore.getState().partnership;
+                  const user = useAuthStore.getState().user;
+                  if (partnership && user) {
+                    const isUser1 = partnership.userId1 === user.id;
+                    const partnerId = isUser1 ? partnership.userId2 : partnership.userId1;
+                    try {
+                      const partner = await getUserById(partnerId);
+                      if (partner) {
+                        await updateDailyPhotoWidget(promptData, partner.name, isUser1);
+                      }
+                    } catch (error) {
+                      console.error('Error updating daily photo widget:', error);
+                    }
+                  }
                 }
               },
             );

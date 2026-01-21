@@ -20,6 +20,12 @@ import {
   Countdown,
   GameScore,
   PhotoPrompt,
+  GameState,
+  DateIdea,
+  DateSwipe,
+  DateMatch,
+  ThumbKiss,
+  Referral,
 } from '@utils/types';
 
 // Initialize Firebase app (auto-initialized from native config, but verify)
@@ -82,6 +88,30 @@ export const gameScoresCollection = firebaseFirestore.collection(
 export const photoPromptsCollection = firebaseFirestore.collection(
   'photoPrompts',
 ) as FirebaseFirestoreTypes.CollectionReference<PhotoPrompt>;
+
+export const gameStatesCollection = firebaseFirestore.collection(
+  'gameStates',
+) as FirebaseFirestoreTypes.CollectionReference<GameState>;
+
+export const dateIdeasCollection = firebaseFirestore.collection(
+  'dateIdeas',
+) as FirebaseFirestoreTypes.CollectionReference<DateIdea>;
+
+export const dateSwipesCollection = firebaseFirestore.collection(
+  'dateSwipes',
+) as FirebaseFirestoreTypes.CollectionReference<DateSwipe>;
+
+export const dateMatchesCollection = firebaseFirestore.collection(
+  'dateMatches',
+) as FirebaseFirestoreTypes.CollectionReference<DateMatch>;
+
+export const thumbKissesCollection = firebaseFirestore.collection(
+  'thumbKisses',
+) as FirebaseFirestoreTypes.CollectionReference<ThumbKiss>;
+
+export const referralsCollection = firebaseFirestore.collection(
+  'referrals',
+) as FirebaseFirestoreTypes.CollectionReference<Referral>;
 
 /**
  * Helper function to get Firestore server timestamp
@@ -333,5 +363,137 @@ export const photoPromptConverter: FirebaseFirestoreTypes.FirestoreDataConverter
         id: snapshot.id,
         ...data,
       } as PhotoPrompt;
+    },
+  };
+
+export const gameStateConverter: FirebaseFirestoreTypes.FirestoreDataConverter<GameState> =
+  {
+    toFirestore: (gameState: GameState): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...gameState};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): GameState => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as GameState;
+    },
+  };
+
+export const dateIdeaConverter: FirebaseFirestoreTypes.FirestoreDataConverter<DateIdea> =
+  {
+    toFirestore: (dateIdea: DateIdea): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...dateIdea};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): DateIdea => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as DateIdea;
+    },
+  };
+
+export const dateSwipeConverter: FirebaseFirestoreTypes.FirestoreDataConverter<DateSwipe> =
+  {
+    toFirestore: (dateSwipe: DateSwipe): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...dateSwipe};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): DateSwipe => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as DateSwipe;
+    },
+  };
+
+export const dateMatchConverter: FirebaseFirestoreTypes.FirestoreDataConverter<DateMatch> =
+  {
+    toFirestore: (dateMatch: DateMatch): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...dateMatch};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): DateMatch => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as DateMatch;
+    },
+  };
+
+export const thumbKissConverter: FirebaseFirestoreTypes.FirestoreDataConverter<ThumbKiss> =
+  {
+    toFirestore: (thumbKiss: ThumbKiss): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...thumbKiss};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): ThumbKiss => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as ThumbKiss;
+    },
+  };
+
+export const referralConverter: FirebaseFirestoreTypes.FirestoreDataConverter<Referral> =
+  {
+    toFirestore: (referral: Referral): FirebaseFirestoreTypes.DocumentData => {
+      const data: any = {...referral};
+      Object.keys(data).forEach(key => {
+        if (data[key] === undefined) {
+          delete data[key];
+        }
+      });
+      return data;
+    },
+    fromFirestore: (
+      snapshot: FirebaseFirestoreTypes.QueryDocumentSnapshot,
+    ): Referral => {
+      const data = snapshot.data();
+      return {
+        id: snapshot.id,
+        ...data,
+      } as Referral;
     },
   };

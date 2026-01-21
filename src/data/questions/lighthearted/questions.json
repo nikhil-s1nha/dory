@@ -1,0 +1,242 @@
+[
+  {
+    "id": "light_001",
+    "text": "If you could have any superpower for just one day, what would you pick?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "light_002",
+    "text": "What's your guilty pleasure TV show or movie?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "light_003",
+    "text": "If we could switch places for a day, what would you do first?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "light_004",
+    "text": "What's the weirdest food combination you actually enjoy?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "light_005",
+    "text": "If you could be any animal, which would you choose and why?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "light_006",
+    "text": "What's your worst habit that you know drives me crazy?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "light_007",
+    "text": "If you won the lottery, what's the first thing you'd buy?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "light_008",
+    "text": "What's the silliest argument we've ever had?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "light_009",
+    "text": "If we had to survive a zombie apocalypse together, what would be our strategy?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "light_010",
+    "text": "What's your go-to karaoke song?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "light_011",
+    "text": "If you could live in any fictional world, which would it be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "light_012",
+    "text": "What's the most embarrassing thing that's happened to you this week?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "light_013",
+    "text": "If you could have dinner with any three people (dead or alive), who would they be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "light_014",
+    "text": "What's your weirdest hidden talent?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "light_015",
+    "text": "If we could only eat one cuisine for the rest of our lives, what would you choose?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "light_016",
+    "text": "What's your most irrational fear?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "light_017",
+    "text": "If you could instantly become an expert at something, what would it be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "light_018",
+    "text": "What's the funniest thing you've seen me do?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "light_019",
+    "text": "If you could change one thing about me, what would it be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "light_020",
+    "text": "What's your favorite cheesy pickup line?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-20T00:00:00Z"
+  },
+  {
+    "id": "light_021",
+    "text": "If we were characters in a sitcom, what would our catchphrase be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-21T00:00:00Z"
+  },
+  {
+    "id": "light_022",
+    "text": "What's the worst gift you've ever received?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-22T00:00:00Z"
+  },
+  {
+    "id": "light_023",
+    "text": "If you could only watch one movie for the rest of your life, which would it be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-23T00:00:00Z"
+  },
+  {
+    "id": "light_024",
+    "text": "What's your most used emoji when texting me?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-24T00:00:00Z"
+  },
+  {
+    "id": "light_025",
+    "text": "If you had to describe our relationship in three words, what would they be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-25T00:00:00Z"
+  },
+  {
+    "id": "light_026",
+    "text": "What's your go-to comfort food when you're stressed?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-26T00:00:00Z"
+  },
+  {
+    "id": "light_027",
+    "text": "If you could time travel, would you go to the past or future?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-27T00:00:00Z"
+  },
+  {
+    "id": "light_028",
+    "text": "What's the weirdest dream you've had about us?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-28T00:00:00Z"
+  },
+  {
+    "id": "light_029",
+    "text": "If you could have any pet (real or fictional), what would it be?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-29T00:00:00Z"
+  },
+  {
+    "id": "light_030",
+    "text": "What's your favorite way to procrastinate?",
+    "category": "lighthearted",
+    "type": "text",
+    "deckId": "lighthearted",
+    "createdAt": "2024-01-30T00:00:00Z"
+  }
+]

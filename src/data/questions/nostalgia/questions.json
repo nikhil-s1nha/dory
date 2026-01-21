@@ -1,0 +1,162 @@
+[
+  {
+    "id": "nostalgia_001",
+    "text": "What's one of your favorite memories of us from our early days?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_002",
+    "text": "Remember when we first met? What was your first impression of me?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_003",
+    "text": "What's a place we visited together that holds special meaning for you?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_004",
+    "text": "What song reminds you of our relationship and why?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_005",
+    "text": "What's the funniest thing that happened on one of our early dates?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_006",
+    "text": "What's something we used to do that we don't do anymore, but you miss?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_007",
+    "text": "When did you first realize you were falling in love with me?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_008",
+    "text": "What's your favorite photo of us together and why?",
+    "category": "nostalgia",
+    "type": "photo",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_009",
+    "text": "What's a tradition we started together that you cherish?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_010",
+    "text": "What's the best surprise you've ever given me or received from me?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_011",
+    "text": "What's a memory from our relationship that always makes you smile?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_012",
+    "text": "What's something I did early on that made you think 'this is the one'?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_013",
+    "text": "What's your favorite inside joke we share?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_014",
+    "text": "What's a trip or adventure we took that stands out in your memory?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_015",
+    "text": "What's the first gift we ever exchanged?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_016",
+    "text": "What's something we used to argue about that we now laugh about?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_017",
+    "text": "What's your favorite memory of us celebrating something together?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_018",
+    "text": "What's a place we've been that you'd love to visit again?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_019",
+    "text": "What's the best advice someone gave us about our relationship?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "nostalgia_020",
+    "text": "What's a moment from our past that you'd love to relive?",
+    "category": "nostalgia",
+    "type": "text",
+    "deckId": "nostalgia",
+    "createdAt": "2024-01-20T00:00:00Z"
+  }
+]

@@ -14,9 +14,11 @@ interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
   isLoading: boolean;
+  hasCompletedOnboarding: boolean;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setLoading: (isLoading: boolean) => void;
+  setOnboardingComplete: () => void;
   logout: () => void;
   initializeAuth: () => () => void; // Returns unsubscribe function
 }
@@ -28,6 +30,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       token: null,
       isLoading: true,
+      hasCompletedOnboarding: false,
       setUser: user =>
         set({
           user,
@@ -35,12 +38,21 @@ export const useAuthStore = create<AuthState>()(
         }),
       setToken: token => set({token}),
       setLoading: isLoading => set({isLoading}),
-      logout: () =>
+      setOnboardingComplete: () => set({hasCompletedOnboarding: true}),
+      logout: async () => {
+        // Clear navigation state on logout
+        try {
+          await AsyncStorage.removeItem('NAVIGATION_STATE');
+        } catch (e) {
+          console.warn('Failed to clear navigation state on logout:', e);
+        }
         set({
           user: null,
           isAuthenticated: false,
           token: null,
-        }),
+          hasCompletedOnboarding: false,
+        });
+      },
       initializeAuth: () => {
         // Subscribe to Firebase Auth state changes
         // Note: onAuthStateChanged from authService already updates the store,

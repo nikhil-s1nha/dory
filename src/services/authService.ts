@@ -13,6 +13,8 @@ import {
 import {useAuthStore} from '@store/authSlice';
 import {User} from '@utils/types';
 import {AuthError, getErrorMessage} from '@utils/errors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {validateReferralCode} from './referralService';
 
 /**
  * Sign up a new user
@@ -40,6 +42,7 @@ export async function signUp(
     // Create User document in Firestore
     const userId = generateId();
     const now = new Date().toISOString();
+    
     const userData: User = {
       id: userId,
       email,
@@ -49,6 +52,27 @@ export async function signUp(
     };
 
     await usersCollection.doc(userId).set(userData);
+
+    // Check for pending referral code and store it for later use
+    const pendingReferralCode = await AsyncStorage.getItem('pendingReferralCode');
+    
+    if (pendingReferralCode) {
+      try {
+        // Validate referral code exists and is not expired
+        const isValid = await validateReferralCode(pendingReferralCode);
+        if (isValid) {
+          // Store referral code in user document (temporary field, will be cleared after pairing)
+          await usersCollection.doc(userId).update({
+            referralId: pendingReferralCode, // Store the referral code for later use
+          } as any); // Type assertion for temporary field
+        }
+      } catch (error) {
+        // Don't fail signup if referral lookup fails
+        console.error('Error processing referral code:', error);
+      }
+      // Clear the pending referral code
+      await AsyncStorage.removeItem('pendingReferralCode');
+    }
 
     // Update Zustand store
     useAuthStore.getState().setUser(userData);
@@ -187,6 +211,29 @@ export async function getCurrentUser(): Promise<User | null> {
     throw new AuthError(message, error.code || 'auth/unknown', error);
   }
 }
+
+/**
+ * Get user by ID
+ */
+export async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const userDoc = await usersCollection.doc(userId).get();
+
+    if (!userDoc.exists) {
+      return null;
+    }
+
+    return userDoc.data() as User;
+  } catch (error: any) {
+    const message = getErrorMessage(error);
+    throw new AuthError(message, error.code || 'auth/unknown', error);
+  }
+}
+
+/**
+ * Alias for getUserById for backward compatibility
+ */
+export const getUser = getUserById;
 
 /**
  * Auth state change listener

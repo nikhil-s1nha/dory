@@ -1,0 +1,226 @@
+[
+  {
+    "id": "gtky_001",
+    "text": "What's something about yourself that you think I don't know?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "gtky_002",
+    "text": "What's your ideal way to spend a lazy Sunday?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "gtky_003",
+    "text": "What's a book, movie, or show that changed your perspective?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "gtky_004",
+    "text": "What's your love language? How do you prefer to receive affection?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "gtky_005",
+    "text": "What's something you're passionate about that I might not know?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "gtky_006",
+    "text": "What's your biggest pet peeve?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "gtky_007",
+    "text": "What's a skill you've always wanted to learn?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "gtky_008",
+    "text": "What's your perfect day? Walk me through it from morning to night.",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "gtky_009",
+    "text": "What's something you're secretly really good at?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "gtky_010",
+    "text": "What's your biggest fear, and how do you cope with it?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "gtky_011",
+    "text": "What's a childhood memory that shaped who you are today?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "gtky_012",
+    "text": "What's your philosophy on money and spending?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "gtky_013",
+    "text": "What's something that always makes you feel better when you're down?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "gtky_014",
+    "text": "What's your biggest regret, and what did you learn from it?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "gtky_015",
+    "text": "What's a value that's most important to you?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "gtky_016",
+    "text": "What's your relationship with social media?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "gtky_017",
+    "text": "What's something you're insecure about that I might not notice?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "gtky_018",
+    "text": "What's your favorite way to decompress after a stressful day?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "gtky_019",
+    "text": "What's a boundary that's really important to you?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "gtky_020",
+    "text": "What's your take on work-life balance?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-20T00:00:00Z"
+  },
+  {
+    "id": "gtky_021",
+    "text": "What's something you wish people understood about you?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-21T00:00:00Z"
+  },
+  {
+    "id": "gtky_022",
+    "text": "What's your relationship with failure? How do you bounce back?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-22T00:00:00Z"
+  },
+  {
+    "id": "gtky_023",
+    "text": "What's a way you've changed in the past year?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-23T00:00:00Z"
+  },
+  {
+    "id": "gtky_024",
+    "text": "What's your relationship with conflict? How do you handle disagreements?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-24T00:00:00Z"
+  },
+  {
+    "id": "gtky_025",
+    "text": "What's something you're curious about but haven't explored yet?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-25T00:00:00Z"
+  },
+  {
+    "id": "gtky_026",
+    "text": "What's your biggest dream that you haven't shared with many people?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-26T00:00:00Z"
+  },
+  {
+    "id": "gtky_027",
+    "text": "What's something you've always wanted to tell me but never found the right moment?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-27T00:00:00Z"
+  },
+  {
+    "id": "gtky_028",
+    "text": "What's a question you've always wanted to ask me?",
+    "category": "get_to_know_you",
+    "type": "text",
+    "deckId": "get_to_know_you",
+    "createdAt": "2024-01-28T00:00:00Z"
+  }
+]

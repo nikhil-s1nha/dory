@@ -1,0 +1,178 @@
+[
+  {
+    "id": "future_001",
+    "text": "What new hobby or experience would you like to try together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "future_002",
+    "text": "Where's one place you'd love to travel with me in the next year?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-02T00:00:00Z"
+  },
+  {
+    "id": "future_003",
+    "text": "What's a goal you want us to achieve together in the next five years?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-03T00:00:00Z"
+  },
+  {
+    "id": "future_004",
+    "text": "How do you envision our ideal weekend in five years?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-04T00:00:00Z"
+  },
+  {
+    "id": "future_005",
+    "text": "What's a skill you'd like us to learn together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-05T00:00:00Z"
+  },
+  {
+    "id": "future_006",
+    "text": "What tradition would you like to start for our future family?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-06T00:00:00Z"
+  },
+  {
+    "id": "future_007",
+    "text": "Where do you see us living in ten years?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-07T00:00:00Z"
+  },
+  {
+    "id": "future_008",
+    "text": "What's a bucket list item you want us to check off together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "future_009",
+    "text": "How do you want to celebrate our next big milestone together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-09T00:00:00Z"
+  },
+  {
+    "id": "future_010",
+    "text": "What's a change you'd like to make to our lifestyle together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-10T00:00:00Z"
+  },
+  {
+    "id": "future_011",
+    "text": "What's a project you'd love us to work on together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-11T00:00:00Z"
+  },
+  {
+    "id": "future_012",
+    "text": "How do you want our relationship to evolve over the next year?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-12T00:00:00Z"
+  },
+  {
+    "id": "future_013",
+    "text": "What's an adventure you want us to go on?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-13T00:00:00Z"
+  },
+  {
+    "id": "future_014",
+    "text": "What's a financial goal you want us to achieve together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-14T00:00:00Z"
+  },
+  {
+    "id": "future_015",
+    "text": "How do you envision us spending our retirement together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "future_016",
+    "text": "What's a place you've always wanted to visit with me?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-16T00:00:00Z"
+  },
+  {
+    "id": "future_017",
+    "text": "What's a dream you have that you want my support with?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-17T00:00:00Z"
+  },
+  {
+    "id": "future_018",
+    "text": "How do you want to grow old together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-18T00:00:00Z"
+  },
+  {
+    "id": "future_019",
+    "text": "What's a change in our home or space you'd like to make together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-19T00:00:00Z"
+  },
+  {
+    "id": "future_020",
+    "text": "What's a milestone you're excited to reach together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-20T00:00:00Z"
+  },
+  {
+    "id": "future_021",
+    "text": "What's something you want to build or create together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-21T00:00:00Z"
+  },
+  {
+    "id": "future_022",
+    "text": "How do you want to give back to the world together?",
+    "category": "future_planning",
+    "type": "text",
+    "deckId": "future_planning",
+    "createdAt": "2024-01-22T00:00:00Z"
+  }
+]

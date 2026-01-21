@@ -11,6 +11,9 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* CandleCanvasWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F1 /* CandleCanvasWidget.swift */; };
+		A2B3C4D5E6F7A8B9C0D1E2F3 /* CandleCountdownWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C4D5E6F7A8B9C0D1E2F2 /* CandleCountdownWidget.swift */; };
+		A3B4C5D6E7F8A9B0C1D2E3F4 /* CandleDailyPhotoWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B4C5D6E7F8A9B0C1D2E3F3 /* CandleDailyPhotoWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +27,19 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Candle/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Candle/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		A1B2C3D4E5F6A7B8C9D0E1F1 /* CandleCanvasWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CandleCanvasWidget.swift; path = CandleCanvasWidget/CandleCanvasWidget.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F5 /* CandleCanvasWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CandleCanvasWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F6A7B8C9D0E1F6 /* CandleCanvasWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = CandleCanvasWidget.entitlements; path = CandleCanvasWidget/CandleCanvasWidget.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info.plist"; path = "CandleCanvasWidget/Info.plist"; sourceTree = "<group>"; };
+		A2B3C4D5E6F7A8B9C0D1E2F2 /* CandleCountdownWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CandleCountdownWidget.swift; path = CandleCountdownWidget/CandleCountdownWidget.swift; sourceTree = "<group>"; };
+		A2B3C4D5E6F7A8B9C0D1E2F6 /* CandleCountdownWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CandleCountdownWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2B3C4D5E6F7A8B9C0D1E2F7 /* CandleCountdownWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = CandleCountdownWidget.entitlements; path = CandleCountdownWidget/CandleCountdownWidget.entitlements; sourceTree = "<group>"; };
+		A2B3C4D5E6F7A8B9C0D1E2F8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info.plist"; path = "CandleCountdownWidget/Info.plist"; sourceTree = "<group>"; };
+		A3B4C5D6E7F8A9B0C1D2E3F3 /* CandleDailyPhotoWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CandleDailyPhotoWidget.swift; path = CandleDailyPhotoWidget/CandleDailyPhotoWidget.swift; sourceTree = "<group>"; };
+		A3B4C5D6E7F8A9B0C1D2E3F7 /* CandleDailyPhotoWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CandleDailyPhotoWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3B4C5D6E7F8A9B0C1D2E3F8 /* CandleDailyPhotoWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = CandleDailyPhotoWidget.entitlements; path = CandleDailyPhotoWidget/CandleDailyPhotoWidget.entitlements; sourceTree = "<group>"; };
+		A3B4C5D6E7F8A9B0C1D2E3F9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info.plist"; path = "CandleDailyPhotoWidget/Info.plist"; sourceTree = "<group>"; };
+		A4B5C6D7E8F9A0B1C2D3E4F0 /* Candle.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Candle.entitlements; path = Candle/Candle.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +48,27 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-Candle.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F6A7B8C9D0E2F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A2B3C4D5E6F7A8B9C0D1E3F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,8 +83,39 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				A4B5C6D7E8F9A0B1C2D3E4F0 /* Candle.entitlements */,
 			);
 			name = Candle;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F6A7B8C9D0E1F0 /* CandleCanvasWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F6A7B8C9D0E1F1 /* CandleCanvasWidget.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F7 /* Info.plist */,
+				A1B2C3D4E5F6A7B8C9D0E1F6 /* CandleCanvasWidget.entitlements */,
+			);
+			name = CandleCanvasWidget;
+			sourceTree = "<group>";
+		};
+		A2B3C4D5E6F7A8B9C0D1E2F1 /* CandleCountdownWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A2B3C4D5E6F7A8B9C0D1E2F2 /* CandleCountdownWidget.swift */,
+				A2B3C4D5E6F7A8B9C0D1E2F8 /* Info.plist */,
+				A2B3C4D5E6F7A8B9C0D1E2F7 /* CandleCountdownWidget.entitlements */,
+			);
+			name = CandleCountdownWidget;
+			sourceTree = "<group>";
+		};
+		A3B4C5D6E7F8A9B0C1D2E3F2 /* CandleDailyPhotoWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A3B4C5D6E7F8A9B0C1D2E3F3 /* CandleDailyPhotoWidget.swift */,
+				A3B4C5D6E7F8A9B0C1D2E3F9 /* Info.plist */,
+				A3B4C5D6E7F8A9B0C1D2E3F8 /* CandleDailyPhotoWidget.entitlements */,
+			);
+			name = CandleDailyPhotoWidget;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -70,6 +138,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07FAE1A68108700A75B9A /* Candle */,
+				A1B2C3D4E5F6A7B8C9D0E1F0 /* CandleCanvasWidget */,
+				A2B3C4D5E6F7A8B9C0D1E2F1 /* CandleCountdownWidget */,
+				A3B4C5D6E7F8A9B0C1D2E3F2 /* CandleDailyPhotoWidget */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -84,6 +155,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* Candle.app */,
+				A1B2C3D4E5F6A7B8C9D0E1F5 /* CandleCanvasWidget.appex */,
+				A2B3C4D5E6F7A8B9C0D1E2F6 /* CandleCountdownWidget.appex */,
+				A3B4C5D6E7F8A9B0C1D2E3F7 /* CandleDailyPhotoWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,6 +195,57 @@
 			productReference = 13B07F961A680F5B00A75B9A /* Candle.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1B2C3D4E5F6A7B8C9D0E1F4 /* CandleCanvasWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F6A7B8C9D0E1F8 /* Build configuration list for PBXNativeTarget "CandleCanvasWidget" */;
+			buildPhases = (
+				A1B2C3D4E5F6A7B8C9D0E1F9 /* Sources */,
+				A1B2C3D4E5F6A7B8C9D0E2F0 /* Frameworks */,
+				A1B2C3D4E5F6A7B8C9D0E2F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CandleCanvasWidget;
+			productName = CandleCanvasWidget;
+			productReference = A1B2C3D4E5F6A7B8C9D0E1F5 /* CandleCanvasWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A2B3C4D5E6F7A8B9C0D1E2F5 /* CandleCountdownWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A2B3C4D5E6F7A8B9C0D1E2F9 /* Build configuration list for PBXNativeTarget "CandleCountdownWidget" */;
+			buildPhases = (
+				A2B3C4D5E6F7A8B9C0D1E3F0 /* Sources */,
+				A2B3C4D5E6F7A8B9C0D1E3F1 /* Frameworks */,
+				A2B3C4D5E6F7A8B9C0D1E3F2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CandleCountdownWidget;
+			productName = CandleCountdownWidget;
+			productReference = A2B3C4D5E6F7A8B9C0D1E2F6 /* CandleCountdownWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A3B4C5D6E7F8A9B0C1D2E3F6 /* CandleDailyPhotoWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3B4C5D6E7F8A9B0C1D2E4F0 /* Build configuration list for PBXNativeTarget "CandleDailyPhotoWidget" */;
+			buildPhases = (
+				A3B4C5D6E7F8A9B0C1D2E4F1 /* Sources */,
+				A3B4C5D6E7F8A9B0C1D2E4F2 /* Frameworks */,
+				A3B4C5D6E7F8A9B0C1D2E4F3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CandleDailyPhotoWidget;
+			productName = CandleDailyPhotoWidget;
+			productReference = A3B4C5D6E7F8A9B0C1D2E3F7 /* CandleDailyPhotoWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -131,6 +256,15 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1120;
+					};
+					A1B2C3D4E5F6A7B8C9D0E1F4 = {
+						CreatedOnToolsVersion = 12.1;
+					};
+					A2B3C4D5E6F7A8B9C0D1E2F5 = {
+						CreatedOnToolsVersion = 12.1;
+					};
+					A3B4C5D6E7F8A9B0C1D2E3F6 = {
+						CreatedOnToolsVersion = 12.1;
 					};
 				};
 			};
@@ -148,6 +282,9 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* Candle */,
+				A1B2C3D4E5F6A7B8C9D0E1F4 /* CandleCanvasWidget */,
+				A2B3C4D5E6F7A8B9C0D1E2F5 /* CandleCountdownWidget */,
+				A3B4C5D6E7F8A9B0C1D2E3F6 /* CandleDailyPhotoWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -159,6 +296,27 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F6A7B8C9D0E2F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A2B3C4D5E6F7A8B9C0D1E3F2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,6 +406,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1B2C3D4E5F6A7B8C9D0E1F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* CandleCanvasWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A2B3C4D5E6F7A8B9C0D1E3F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2B3C4D5E6F7A8B9C0D1E2F3 /* CandleCountdownWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3B4C5D6E7F8A9B0C1D2E3F4 /* CandleDailyPhotoWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -257,6 +439,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Candle/Candle.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Candle/Info.plist;
@@ -285,6 +468,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Candle/Candle.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Candle/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -444,6 +628,120 @@
 			};
 			name = Release;
 		};
+		A1B2C3D4E5F6A7B8C9D0E2F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleCanvasWidget/CandleCanvasWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleCanvasWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleCanvasWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F6A7B8C9D0E2F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleCanvasWidget/CandleCanvasWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleCanvasWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleCanvasWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A2B3C4D5E6F7A8B9C0D1E3F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleCountdownWidget/CandleCountdownWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleCountdownWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleCountdownWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A2B3C4D5E6F7A8B9C0D1E3F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleCountdownWidget/CandleCountdownWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleCountdownWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleCountdownWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleDailyPhotoWidget/CandleDailyPhotoWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleDailyPhotoWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleDailyPhotoWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CandleDailyPhotoWidget/CandleDailyPhotoWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = CandleDailyPhotoWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.encore.candleapp.CandleDailyPhotoWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -461,6 +759,33 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F6A7B8C9D0E1F8 /* Build configuration list for PBXNativeTarget "CandleCanvasWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F6A7B8C9D0E2F2 /* Debug */,
+				A1B2C3D4E5F6A7B8C9D0E2F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A2B3C4D5E6F7A8B9C0D1E2F9 /* Build configuration list for PBXNativeTarget "CandleCountdownWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2B3C4D5E6F7A8B9C0D1E3F3 /* Debug */,
+				A2B3C4D5E6F7A8B9C0D1E3F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3B4C5D6E7F8A9B0C1D2E4F0 /* Build configuration list for PBXNativeTarget "CandleDailyPhotoWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3B4C5D6E7F8A9B0C1D2E4F4 /* Debug */,
+				A3B4C5D6E7F8A9B0C1D2E4F5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

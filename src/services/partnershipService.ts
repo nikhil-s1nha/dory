@@ -5,6 +5,7 @@
 
 import {
   partnershipsCollection,
+  usersCollection,
   generateId,
   getTimestamp,
   partnershipConverter,
@@ -12,6 +13,7 @@ import {
 import {usePartnershipStore} from '@store/partnershipSlice';
 import {Partnership} from '@utils/types';
 import {FirestoreError, getErrorMessage} from '@utils/errors';
+import {markReferralCompleted} from './referralService';
 
 /**
  * Generate a unique 6-digit invite code
@@ -35,7 +37,7 @@ export async function createPartnership(userId: string): Promise<Partnership> {
       userId2: '',
       status: 'pending',
       streakCount: 0,
-      lastActivityDate: now,
+      lastActivityDate: '', // Leave empty until first activity is recorded
       inviteCode,
       skippedQuestionIds: [],
       createdAt: now,
@@ -89,6 +91,33 @@ export async function acceptInvite(
     // Fetch updated partnership
     const updatedDoc = await partnershipsCollection.doc(partnershipId).get();
     const partnership = updatedDoc.data() as Partnership;
+
+    // Check if user has a referral code and mark referral as completed
+    let referralId: string | null = null;
+    try {
+      const userDoc = await usersCollection.doc(userId).get();
+      const user = userDoc.data();
+      referralId = (user as any)?.referralId;
+
+      if (referralId) {
+        // Mark referral as completed (referralId can be either a code or document ID)
+        await markReferralCompleted(referralId, userId);
+      }
+    } catch (error) {
+      // Don't fail pairing if referral completion fails
+      console.error('Error completing referral:', error);
+    } finally {
+      // Always clear referralId from user document, even if referral completion failed
+      if (referralId) {
+        try {
+          await usersCollection.doc(userId).update({
+            referralId: null,
+          });
+        } catch (error) {
+          console.error('Error clearing referralId:', error);
+        }
+      }
+    }
 
     // Update Zustand store
     usePartnershipStore.getState().setPartnership(partnership);
@@ -210,6 +239,22 @@ export async function resetStreak(
     return await updatePartnership(partnershipId, {
       streakCount: 0,
       lastActivityDate: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    const message = getErrorMessage(error);
+    throw new FirestoreError(message, error.code || 'unknown', error);
+  }
+}
+
+/**
+ * Record canvas activity
+ */
+export async function recordCanvasActivity(
+  partnershipId: string,
+): Promise<void> {
+  try {
+    await updatePartnership(partnershipId, {
+      lastCanvasActivityDate: new Date().toISOString(),
     });
   } catch (error: any) {
     const message = getErrorMessage(error);

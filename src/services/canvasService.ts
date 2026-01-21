@@ -10,6 +10,7 @@ import {
 } from './firebase';
 import {CanvasDrawing} from '@utils/types';
 import {FirestoreError, StorageError, getErrorMessage} from '@utils/errors';
+import {updateCanvasWidget} from './widgetService';
 
 /**
  * Save canvas drawing
@@ -19,6 +20,9 @@ export async function saveCanvas(
   drawingData: string,
   userId: string,
   thumbnail?: string,
+  backgroundColor?: string,
+  canvasWidth?: number,
+  canvasHeight?: number,
 ): Promise<CanvasDrawing> {
   try {
     // Set previous canvas as not current
@@ -44,9 +48,18 @@ export async function saveCanvas(
       createdBy: userId,
       createdAt: now,
       isCurrent: true,
+      backgroundColor,
+      metadata: {
+        backgroundColor,
+        canvasWidth,
+        canvasHeight,
+      },
     };
 
     await canvasDrawingsCollection.doc(canvasId).set(canvasData);
+    
+    // Update widget
+    await updateCanvasWidget(canvasData, partnershipId);
 
     return canvasData;
   } catch (error: any) {
@@ -126,6 +139,89 @@ export async function downloadCanvas(canvasId: string): Promise<string> {
   } catch (error: any) {
     const message = getErrorMessage(error);
     throw new FirestoreError(message, error.code || 'unknown', error);
+  }
+}
+
+/**
+ * Download canvas to device (saves to Photos app)
+ */
+export async function downloadCanvasToDevice(
+  canvasId: string,
+  drawingData: string,
+): Promise<void> {
+  try {
+    // Import CameraRoll dynamically
+    const {CameraRoll} = require('@react-native-community/cameraroll');
+    const {Skia} = require('@shopify/react-native-skia');
+    const RNFS = require('react-native-fs');
+
+    // Get canvas metadata to retrieve background color
+    const canvasDoc = await canvasDrawingsCollection.doc(canvasId).get();
+    const canvas = canvasDoc.data() as CanvasDrawing;
+    const backgroundColor = canvas?.backgroundColor || canvas?.metadata?.backgroundColor;
+
+    // Parse drawing data
+    const paths = JSON.parse(drawingData);
+
+    // Create surface for image (use larger size for better quality)
+    const surface = Skia.Surface.Make(800, 800);
+    if (!surface) {
+      throw new Error('Failed to create image surface');
+    }
+
+    const canvasSurface = surface.getCanvas();
+    
+    // Determine background color
+    let bgColor = '#000000'; // Default black
+    if (backgroundColor === 'white') {
+      bgColor = '#FFFFFF';
+    } else if (backgroundColor === 'beige') {
+      bgColor = '#FFF8F0';
+    }
+    
+    canvasSurface.clear(Skia.Color(bgColor));
+
+    // Draw all paths
+    paths.forEach((pathData: any) => {
+      try {
+        const path = Skia.Path.MakeFromSVGString(pathData.path);
+        if (path) {
+          const paint = Skia.Paint();
+          paint.setColor(Skia.Color(pathData.color || '#FFFFFF'));
+          paint.setStrokeWidth(pathData.strokeWidth || 5);
+          paint.setStyle(Skia.PaintStyle.Stroke);
+          paint.setStrokeCap(Skia.StrokeCap.Round);
+          paint.setStrokeJoin(Skia.StrokeJoin.Round);
+          canvasSurface.drawPath(path, paint);
+        }
+      } catch (pathError) {
+        console.warn('Error drawing path:', pathError);
+        // Continue with other paths
+      }
+    });
+
+    // Convert to image
+    const image = surface.makeImageSnapshot();
+    const pngData = image.encodeToBase64();
+    surface.dispose();
+
+    // Save to temporary file
+    const tempPath = `${RNFS.CachesDirectoryPath}/canvas_${canvasId}.png`;
+    await RNFS.writeFile(tempPath, pngData, 'base64');
+
+    // Save to Photos
+    await CameraRoll.save(tempPath, {type: 'photo'});
+
+    // Clean up temp file
+    try {
+      await RNFS.unlink(tempPath);
+    } catch (unlinkError) {
+      // Non-critical, just log
+      console.warn('Error cleaning up temp file:', unlinkError);
+    }
+  } catch (error: any) {
+    const message = getErrorMessage(error);
+    throw new StorageError(`Failed to save canvas to device: ${message}`, error);
   }
 }
 
