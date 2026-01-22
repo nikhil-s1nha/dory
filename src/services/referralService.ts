@@ -408,11 +408,12 @@ export async function grantReferralReward(referralId: string): Promise<void> {
       rewardType: 'free_month',
     });
 
+    // ARCHIVED: Push notifications disabled
     // Send notification to referrer
-    await sendReferralNotification(
-      referral.referrerId,
-      'Your friend joined Candle! You earned 1 free month 🎉',
-    );
+    // await sendReferralNotification(
+    //   referral.referrerId,
+    //   'Your friend joined Candle! You earned 1 free month 🎉',
+    // );
   } catch (error: any) {
     throw new Error(`Failed to grant referral reward: ${error.message}`);
   }

@@ -13,6 +13,7 @@ import {
 import {Message, Reaction} from '@utils/types';
 import {FirestoreError, StorageError, getErrorMessage} from '@utils/errors';
 import {updatePartnership} from './partnershipService';
+// ARCHIVED: Push notifications disabled - import kept for type compatibility
 import {sendMessageNotification} from './notificationService';
 
 /**
@@ -34,13 +35,14 @@ export async function sendMessage(
 
     await messagesCollection.doc(messageId).set(messageData);
 
+    // ARCHIVED: Push notifications disabled
     // Send notification to partner (non-blocking)
-    try {
-      await sendMessageNotification(message.partnershipId, message.senderId, message.type, messageId);
-    } catch (error) {
-      // Don't fail message send if notification fails
-      console.error('Error sending message notification:', error);
-    }
+    // try {
+    //   await sendMessageNotification(message.partnershipId, message.senderId, message.type, messageId);
+    // } catch (error) {
+    //   // Don't fail message send if notification fails
+    //   console.error('Error sending message notification:', error);
+    // }
 
     return messageData;
   } catch (error: any) {

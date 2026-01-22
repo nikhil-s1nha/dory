@@ -13,7 +13,8 @@ import {Provider as PaperProvider} from 'react-native-paper';
 import {Navigation, navigationRef} from '@navigation';
 import {useAuthStore} from '@store/authSlice';
 import {usePartnershipStore} from '@store/partnershipSlice';
-import messaging from '@react-native-firebase/messaging';
+// ARCHIVED: Push notification imports - uncomment to re-enable
+// import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   initializeNotifications,
@@ -60,16 +61,17 @@ const App = (): React.JSX.Element => {
         partnershipUnsubscribeRef.current = unsubscribe;
       });
 
+      // ARCHIVED: Push notifications disabled
       // Initialize notifications
-      initializeNotifications(user.id);
-      const {unsubscribeForeground, unsubscribeNotificationOpened} =
-        setupNotificationListeners();
+      // initializeNotifications(user.id);
+      // const {unsubscribeForeground, unsubscribeNotificationOpened} =
+      //   setupNotificationListeners();
 
       // Cleanup notification listeners
-      return () => {
-        unsubscribeForeground();
-        unsubscribeNotificationOpened();
-      };
+      // return () => {
+      //   unsubscribeForeground();
+      //   unsubscribeNotificationOpened();
+      // };
     } else {
       // Clear partnership when user logs out
       if (partnershipUnsubscribeRef.current) {
@@ -80,25 +82,26 @@ const App = (): React.JSX.Element => {
     }
   }, [user?.id, initializePartnership]);
 
-  useEffect(() => {
-    // Handle notification opened when app is in background/quit
-    const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
-      handleNotificationOpened(remoteMessage);
-      navigateFromNotification(remoteMessage.data as NotificationData);
-    });
+  // ARCHIVED: Push notifications disabled
+  // useEffect(() => {
+  //   // Handle notification opened when app is in background/quit
+  //   const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
+  //     handleNotificationOpened(remoteMessage);
+  //     navigateFromNotification(remoteMessage.data as NotificationData);
+  //   });
 
-    // Check if app was opened from a notification
-    messaging()
-      .getInitialNotification()
-      .then(remoteMessage => {
-        if (remoteMessage) {
-          handleNotificationOpened(remoteMessage);
-          navigateFromNotification(remoteMessage.data as NotificationData);
-        }
-      });
+  //   // Check if app was opened from a notification
+  //   messaging()
+  //     .getInitialNotification()
+  //     .then(remoteMessage => {
+  //       if (remoteMessage) {
+  //         handleNotificationOpened(remoteMessage);
+  //         navigateFromNotification(remoteMessage.data as NotificationData);
+  //       }
+  //     });
 
-    return unsubscribe;
-  }, []);
+  //   return unsubscribe;
+  // }, []);
 
   useEffect(() => {
     // Capture referral codes from deep links before authentication

@@ -34,6 +34,33 @@ Before you begin, ensure you have the following installed:
    cd ..
    ```
 
+### iOS Build Configuration (M1/M2 Macs)
+
+If you're using an Apple Silicon (M1/M2) Mac, you need to configure Xcode build settings to exclude arm64 architecture for the iOS Simulator. This prevents architecture conflicts with React Native.
+
+**Quick Setup:**
+1. Open `ios/Candle.xcworkspace` in Xcode
+2. For each target (Candle + 3 widgets), set Build Settings → Excluded Architectures → Any iOS Simulator SDK to `arm64`
+3. See [XCODE_BUILD_SETTINGS.md](./XCODE_BUILD_SETTINGS.md) for detailed step-by-step instructions
+
+**Verification:**
+```bash
+npm run verify:ios
+```
+
+This is a one-time setup required after cloning the repository.
+
+### Personal Team Configuration
+
+This project is configured for **Personal Teams** (free Apple Developer accounts). The following features have been disabled as they require a paid Apple Developer account:
+
+- **Push Notifications** - Disabled (code archived, can be re-enabled with paid account)
+- **App Groups** - Removed (widgets cannot share data with main app)
+
+**Note:** Widgets will still build and run, but they won't receive data from the main app without App Groups. To enable full widget functionality, you'll need a paid Apple Developer account ($99/year) and can then add the App Groups capability in Xcode.
+
+See [IOS_BUILD_FIXES.md](./IOS_BUILD_FIXES.md) for more details.
+
 ### Running the App
 
 #### iOS
@@ -43,6 +70,8 @@ npm run ios
 ```
 
 Or open `ios/Candle.xcworkspace` in Xcode and run from there.
+
+**Note for M1/M2 Macs:** First-time setup requires Xcode build settings configuration. See [XCODE_BUILD_SETTINGS.md](./XCODE_BUILD_SETTINGS.md).
 
 **Requirements:**
 - iOS 15.1 or higher
@@ -117,8 +146,8 @@ See `.env.example` for reference.
 
 ### Bundle Identifiers
 
-- **iOS:** `com.encore.candleapp`
-- **Android:** `com.encore.candleapp`
+- **iOS:** `com.nikhilsinha.candleapp`
+- **Android:** `com.nikhilsinha.candleapp`
 
 ## Architecture
 
@@ -142,18 +171,23 @@ See `.env.example` for reference.
 
 ### iOS Issues
 
+**Architecture errors on M1/M2 Mac:**
+See [XCODE_BUILD_SETTINGS.md](./XCODE_BUILD_SETTINGS.md) for configuring Excluded Architectures.
+
 **Pod install fails:**
 ```bash
 cd ios
 pod deintegrate
+pod repo update
 pod install
 cd ..
 ```
 
-**Build fails:**
-- Clean build folder in Xcode (Product → Clean Build Folder)
-- Delete `ios/build` and `ios/Pods` directories
-- Run `pod install` again
+**Build fails with module errors:**
+- Ensure `use_modular_headers!` is commented out in `ios/Podfile`
+- See [IOS_BUILD_FIXES.md](./IOS_BUILD_FIXES.md) for complete troubleshooting
+- Clean build: Product → Clean Build Folder in Xcode
+- Delete DerivedData: `rm -rf ~/Library/Developer/Xcode/DerivedData`
 
 ### Android Issues
 

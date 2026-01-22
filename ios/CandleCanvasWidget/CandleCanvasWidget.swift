@@ -57,9 +57,13 @@ struct CanvasWidgetProvider: IntentTimelineProvider {
     }
     
     private func loadCanvasEntry(configuration: ConfigurationIntent) -> CanvasWidgetEntry {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.encore.candleapp.widgets")
-        let imageDataString = sharedDefaults?.string(forKey: "canvasImageData")
-        let partnershipId = sharedDefaults?.string(forKey: "partnershipId")
+        // ARCHIVED: App Groups removed for Personal Team compatibility
+        // Using standard UserDefaults - widgets won't receive data from main app
+        // To re-enable: Add App Groups capability and use:
+        // let sharedDefaults = UserDefaults(suiteName: "group.com.nikhilsinha.candleapp.widgets")
+        let standardDefaults = UserDefaults.standard
+        let imageDataString = standardDefaults.string(forKey: "canvasImageData")
+        let partnershipId = standardDefaults.string(forKey: "partnershipId")
         
         var imageData: Data? = nil
         if var base64String = imageDataString {

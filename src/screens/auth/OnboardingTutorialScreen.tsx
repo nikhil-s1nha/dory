@@ -20,6 +20,7 @@ import {AuthButton} from '@components/auth/AuthButton';
 import {useAuthStore} from '@store/authSlice';
 import {theme} from '@theme';
 import type {AuthStackParamList} from '@utils/types';
+// ARCHIVED: Push notifications disabled - imports kept for type compatibility
 import {requestNotificationPermissions} from '@services/notificationSettings';
 import {initializeNotifications} from '@services/notificationService';
 import {Alert, Linking} from 'react-native';
@@ -107,35 +108,36 @@ export const OnboardingTutorialScreen: React.FC = () => {
   };
 
   const handleComplete = async () => {
+    // ARCHIVED: Push notifications disabled
     // Request notification permissions before completing onboarding
-    if (user?.id) {
-      try {
-        const granted = await requestNotificationPermissions();
-        if (granted) {
-          // Initialize notifications if permission granted
-          await initializeNotifications(user.id);
-        } else {
-          // Show alert with instructions to enable in settings
-          Alert.alert(
-            'Notifications Disabled',
-            'You can enable notifications later in Settings to stay connected with your partner.',
-            [
-              {
-                text: 'Open Settings',
-                onPress: () => Linking.openSettings(),
-              },
-              {
-                text: 'Maybe Later',
-                style: 'cancel',
-              },
-            ],
-          );
-        }
-      } catch (error) {
-        console.error('Error requesting notification permissions:', error);
-        // Continue with onboarding even if notification setup fails
-      }
-    }
+    // if (user?.id) {
+    //   try {
+    //     const granted = await requestNotificationPermissions();
+    //     if (granted) {
+    //       // Initialize notifications if permission granted
+    //       await initializeNotifications(user.id);
+    //     } else {
+    //       // Show alert with instructions to enable in settings
+    //       Alert.alert(
+    //         'Notifications Disabled',
+    //         'You can enable notifications later in Settings to stay connected with your partner.',
+    //         [
+    //           {
+    //             text: 'Open Settings',
+    //             onPress: () => Linking.openSettings(),
+    //           },
+    //           {
+    //             text: 'Maybe Later',
+    //             style: 'cancel',
+    //           },
+    //         ],
+    //       );
+    //     }
+    //   } catch (error) {
+    //     console.error('Error requesting notification permissions:', error);
+    //     // Continue with onboarding even if notification setup fails
+    //   }
+    // }
 
     setOnboardingComplete();
     // Navigation will automatically switch to Main stack via auth state

@@ -1,13 +1,16 @@
 /**
  * Notification Settings Service
  * Manages notification preferences and permissions
+ * 
+ * ARCHIVED: Push notifications are currently disabled. Code is preserved for future re-enablement.
  */
 
 import {firebaseFirestore} from './firebase';
 import type {NotificationSettings} from '@utils/types';
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
 
-import messaging from '@react-native-firebase/messaging';
+// ARCHIVED: Push notification imports - uncomment to re-enable
+// import messaging from '@react-native-firebase/messaging';
 import {initializeNotifications, scheduleLocalNotification} from './notificationService';
 
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -73,13 +76,14 @@ export async function updateNotificationSettings(
       {merge: true},
     );
 
+    // ARCHIVED: Push notifications disabled
     // If push notifications are enabled, register for remote notifications
-    if (settings.pushEnabled) {
-      await registerForRemoteNotifications(userId);
-    } else if (settings.pushEnabled === false) {
-      // If push notifications are explicitly disabled, unregister
-      await unregisterFromRemoteNotifications(userId);
-    }
+    // if (settings.pushEnabled) {
+    //   await registerForRemoteNotifications(userId);
+    // } else if (settings.pushEnabled === false) {
+    //   // If push notifications are explicitly disabled, unregister
+    //   await unregisterFromRemoteNotifications(userId);
+    // }
 
     // Handle daily prompt reminder scheduling
     if (settings.dailyPromptReminder !== undefined) {
@@ -103,8 +107,14 @@ export async function updateNotificationSettings(
 
 /**
  * Request notification permissions
+ * ARCHIVED: Push notifications disabled - returns false
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - requestNotificationPermissions returns false');
+  return false;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     if (Platform.OS === 'ios') {
       const authStatus = await messaging().requestPermission();
@@ -127,12 +137,19 @@ export async function requestNotificationPermissions(): Promise<boolean> {
     console.error('Error requesting notification permissions:', error);
     return false;
   }
+  */
 }
 
 /**
  * Get notification permission status without requesting
+ * ARCHIVED: Push notifications disabled - returns false
  */
 export async function getNotificationPermissionStatus(): Promise<boolean> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - getNotificationPermissionStatus returns false');
+  return false;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     if (Platform.OS === 'ios') {
       const authStatus = await messaging().hasPermission();
@@ -155,6 +172,7 @@ export async function getNotificationPermissionStatus(): Promise<boolean> {
     console.error('Error checking notification permission status:', error);
     return false;
   }
+  */
 }
 
 /**
@@ -210,8 +228,14 @@ export async function cancelScheduledNotifications(userId: string): Promise<void
 
 /**
  * Register for remote notifications and save FCM token
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 async function registerForRemoteNotifications(userId: string): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - registerForRemoteNotifications skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     // Request permissions first
     const hasPermission = await requestNotificationPermissions();
@@ -227,14 +251,21 @@ async function registerForRemoteNotifications(userId: string): Promise<void> {
       `Failed to register for notifications: ${error.message}`,
     );
   }
+  */
 }
 
 /**
  * Unregister from remote notifications
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function unregisterFromRemoteNotifications(
   userId: string,
 ): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - unregisterFromRemoteNotifications skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     const {removeFCMToken} = await import('./notificationService');
     await removeFCMToken(userId);
@@ -245,6 +276,7 @@ export async function unregisterFromRemoteNotifications(
       `Failed to unregister from notifications: ${error.message}`,
     );
   }
+  */
 }
 
 /**

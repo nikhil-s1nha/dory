@@ -7,7 +7,7 @@
 	<key>INIntentDefinitionModelVersion</key>
 	<string>1.2</string>
 	<key>INIntentDefinitionNamespace</key>
-	<string>com.encore.candleapp</string>
+	<string>com.nikhilsinha.candleapp</string>
 	<key>INIntentDefinitionSystemVersion</key>
 	<string>16.0</string>
 	<key>INIntentDefinitionToolsBuildVersion</key>

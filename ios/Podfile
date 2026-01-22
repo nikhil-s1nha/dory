@@ -8,6 +8,9 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, '15.1'
 prepare_react_native_project!
 
+# Enable modular headers for Firebase and other Swift pods
+# use_modular_headers!
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -15,18 +18,45 @@ if linkage != nil
 end
 
 target 'Candle' do
-  config = use_native_modules!
+  begin
+    config = use_native_modules!
+    react_native_path = config && config[:reactNativePath] ? config[:reactNativePath] : nil
+  rescue => e
+    Pod::UI.warn "use_native_modules! failed: #{e.message}. Using default React Native path."
+    react_native_path = nil
+  end
+  
+  # Fallback to default path if use_native_modules didn't provide one
+  if react_native_path.nil? || react_native_path.empty?
+    # Use relative path from ios directory to node_modules
+    react_native_path = '../node_modules/react-native'
+  else
+    # If path is absolute, convert to relative from ios directory
+    ios_dir = File.expand_path(__dir__)
+    if react_native_path.start_with?('/')
+      react_native_path = Pathname.new(react_native_path).relative_path_from(Pathname.new(ios_dir)).to_s
+    end
+  end
 
   use_react_native!(
-    :path => config[:reactNativePath],
+    :path => react_native_path,
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Manually add native modules since use_native_modules! failed
+  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-async-storage/async-storage'
+  pod 'RNGestureHandler', :path => '../node_modules/react-native-gesture-handler'
+  pod 'react-native-safe-area-context', :path => '../node_modules/react-native-safe-area-context'
+  pod 'RNScreens', :path => '../node_modules/react-native-screens'
+  pod 'RNSVG', :path => '../node_modules/react-native-svg'
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+  pod 'react-native-config', :path => '../node_modules/react-native-config'
+
   post_install do |installer|
     react_native_post_install(
       installer,
-      config[:reactNativePath],
+      react_native_path,
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )

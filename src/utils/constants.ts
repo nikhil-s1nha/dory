@@ -4,7 +4,7 @@
 
 export const APP_NAME = 'Candle';
 export const APP_VERSION = '1.0.0';
-export const BUNDLE_IDENTIFIER = 'com.encore.candleapp';
+export const BUNDLE_IDENTIFIER = 'com.nikhilsinha.candleapp';
 
 // API endpoints (to be configured)
 export const API_ENDPOINTS = {

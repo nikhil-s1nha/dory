@@ -18,7 +18,7 @@ This guide will walk you through setting up Firebase for the Candle app.
 ## Step 2: Add iOS App
 
 1. In Firebase Console, click the iOS icon to add an iOS app
-2. Enter the bundle ID: `com.encore.candleapp` (from `ios/Candle/Info.plist`)
+2. Enter the bundle ID: `com.nikhilsinha.candleapp` (from `ios/Candle/Info.plist`)
 3. Download `GoogleService-Info.plist`
 4. Place the file in `ios/Candle/` directory
 5. Make sure it's added to the Xcode project (drag and drop into Xcode)
@@ -26,7 +26,7 @@ This guide will walk you through setting up Firebase for the Candle app.
 ## Step 3: Add Android App
 
 1. In Firebase Console, click the Android icon to add an Android app
-2. Enter the package name: `com.encore.candleapp` (from `android/app/build.gradle`)
+2. Enter the package name: `com.nikhilsinha.candleapp` (from `android/app/build.gradle`)
 3. Download `google-services.json`
 4. Place the file in `android/app/` directory
 

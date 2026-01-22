@@ -94,21 +94,22 @@ export async function checkStreakStatus(
         const partner = partnerId ? await getUser(partnerId) : null;
         const partnerName = partner?.name || 'your partner';
 
+        // ARCHIVED: Push notifications disabled
         // Get both user IDs to send reminders
-        if (partnership.userId1) {
-          await sendStreakReminderNotification(
-            partnership.userId1,
-            partnerName,
-            hoursRemaining,
-          );
-        }
-        if (partnership.userId2) {
-          await sendStreakReminderNotification(
-            partnership.userId2,
-            partnerName,
-            hoursRemaining,
-          );
-        }
+        // if (partnership.userId1) {
+        //   await sendStreakReminderNotification(
+        //     partnership.userId1,
+        //     partnerName,
+        //     hoursRemaining,
+        //   );
+        // }
+        // if (partnership.userId2) {
+        //   await sendStreakReminderNotification(
+        //     partnership.userId2,
+        //     partnerName,
+        //     hoursRemaining,
+        //   );
+        // }
       } catch (error) {
         // Don't fail streak check if notification fails
         console.error('Error sending streak reminder notification:', error);

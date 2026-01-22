@@ -1,4 +1,4 @@
-package com.encore.candleapp
+package com.nikhilsinha.candleapp
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

@@ -57,10 +57,12 @@ struct DailyPhotoWidgetProvider: IntentTimelineProvider {
     }
     
     private func loadPhotoEntry(configuration: DailyPhotoConfigurationIntent) -> DailyPhotoWidgetEntry {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.encore.candleapp.widgets")
-        let photoURL = sharedDefaults?.string(forKey: "partnerPhotoURL")
-        let promptText = sharedDefaults?.string(forKey: "dailyPhotoPrompt")
-        let partnerName = sharedDefaults?.string(forKey: "partnerName")
+        // ARCHIVED: App Groups removed for Personal Team compatibility
+        // Using standard UserDefaults - widgets won't receive data from main app
+        let standardDefaults = UserDefaults.standard
+        let photoURL = standardDefaults.string(forKey: "partnerPhotoURL")
+        let promptText = standardDefaults.string(forKey: "dailyPhotoPrompt")
+        let partnerName = standardDefaults.string(forKey: "partnerName")
         
         return DailyPhotoWidgetEntry(
             date: Date(),

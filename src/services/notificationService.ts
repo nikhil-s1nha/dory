@@ -1,13 +1,16 @@
 /**
  * Notification Service
  * Comprehensive notification handling for all notification types
+ * 
+ * ARCHIVED: Push notifications are currently disabled. Code is preserved for future re-enablement.
  */
 
-import messaging from '@react-native-firebase/messaging';
+// ARCHIVED: Push notification imports - uncomment to re-enable
+// import messaging from '@react-native-firebase/messaging';
 import {Platform, Alert} from 'react-native';
 import {firebaseFirestore, usersCollection, partnershipsCollection} from './firebase';
 import {getNotificationSettings} from './notificationSettings';
-import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
+// import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 
 /**
  * Notification data structure
@@ -24,8 +27,14 @@ export interface NotificationData {
 
 /**
  * Initialize notifications for a user
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function initializeNotifications(userId: string): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - initializeNotifications skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     // Request permissions
     const authStatus = await messaging().requestPermission();
@@ -59,12 +68,19 @@ export async function initializeNotifications(userId: string): Promise<void> {
     console.error('Error initializing notifications:', error);
     // Don't throw - allow app to continue without notifications
   }
+  */
 }
 
 /**
  * Refresh FCM token
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function refreshFCMToken(userId: string, newToken?: string): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - refreshFCMToken skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     const token = newToken || (await messaging().getToken());
     if (token) {
@@ -79,12 +95,19 @@ export async function refreshFCMToken(userId: string, newToken?: string): Promis
   } catch (error: any) {
     console.error('Error refreshing FCM token:', error);
   }
+  */
 }
 
 /**
  * Remove FCM token on logout
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function removeFCMToken(userId: string): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - removeFCMToken skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     await messaging().deleteToken();
     await firebaseFirestore
@@ -97,14 +120,21 @@ export async function removeFCMToken(userId: string): Promise<void> {
   } catch (error: any) {
     console.error('Error removing FCM token:', error);
   }
+  */
 }
 
 /**
  * Handle notification received when app is in foreground
+ * ARCHIVED: Push notifications disabled - function is no-op
  */
 export function handleNotificationReceived(
-  remoteMessage: FirebaseMessagingTypes.RemoteMessage,
+  remoteMessage: any, // ARCHIVED: Changed from FirebaseMessagingTypes.RemoteMessage
 ): void {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - handleNotificationReceived skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   console.log('Notification received in foreground:', remoteMessage);
   
   // Show local notification or in-app notification
@@ -115,14 +145,21 @@ export function handleNotificationReceived(
       [{text: 'OK'}],
     );
   }
+  */
 }
 
 /**
  * Handle notification opened (tapped)
+ * ARCHIVED: Push notifications disabled - function is no-op
  */
 export function handleNotificationOpened(
-  remoteMessage: FirebaseMessagingTypes.RemoteMessage,
+  remoteMessage: any, // ARCHIVED: Changed from FirebaseMessagingTypes.RemoteMessage
 ): void {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - handleNotificationOpened skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   console.log('Notification opened:', remoteMessage);
   
   const data = remoteMessage.data as NotificationData;
@@ -132,6 +169,7 @@ export function handleNotificationOpened(
 
   // Navigation will be handled in App.tsx using navigationRef
   // This function is called from App.tsx where navigation is available
+  */
 }
 
 /**
@@ -155,6 +193,7 @@ export async function scheduleLocalNotification(
 
 /**
  * Send partner answered notification
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function sendPartnerAnsweredNotification(
   partnerId: string,
@@ -163,6 +202,11 @@ export async function sendPartnerAnsweredNotification(
   questionId: string,
   partnershipId: string,
 ): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - sendPartnerAnsweredNotification skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     const partnerDoc = await usersCollection.doc(partnerId).get();
     const partner = partnerDoc.data();
@@ -210,6 +254,7 @@ export async function sendPartnerAnsweredNotification(
   } catch (error: any) {
     console.error('Error sending partner answered notification:', error);
   }
+  */
 }
 
 /**
@@ -398,6 +443,7 @@ export async function sendGameChallengeNotification(
 
 /**
  * Send message notification (enhanced version)
+ * ARCHIVED: Push notifications disabled - function returns early
  */
 export async function sendMessageNotification(
   partnershipId: string,
@@ -405,6 +451,11 @@ export async function sendMessageNotification(
   messageType: string,
   messageId: string,
 ): Promise<void> {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - sendMessageNotification skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   try {
     // Get partnership to find partner user ID
     const partnershipDoc = await partnershipsCollection.doc(partnershipId).get();
@@ -474,26 +525,43 @@ export async function sendMessageNotification(
   } catch (error: any) {
     console.error('Error sending message notification:', error);
   }
+  */
 }
 
 /**
  * Setup background message handler
+ * ARCHIVED: Push notifications disabled - function is no-op
  */
 export function setupBackgroundMessageHandler(): void {
+  // ARCHIVED: Push notifications disabled
+  console.log('[ARCHIVED] Push notifications disabled - setupBackgroundMessageHandler skipped');
+  return;
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   messaging().setBackgroundMessageHandler(async remoteMessage => {
     console.log('Message handled in background:', remoteMessage);
     // Process notification data
     // Update badge count, local storage, etc.
   });
+  */
 }
 
 /**
  * Setup notification listeners
+ * ARCHIVED: Push notifications disabled - returns no-op functions
  */
 export function setupNotificationListeners(): {
   unsubscribeForeground: () => void;
   unsubscribeNotificationOpened: () => void;
 } {
+  // ARCHIVED: Push notifications disabled - return no-op functions
+  console.log('[ARCHIVED] Push notifications disabled - setupNotificationListeners returns no-ops');
+  return {
+    unsubscribeForeground: () => {},
+    unsubscribeNotificationOpened: () => {},
+  };
+  
+  /* ARCHIVED CODE - Uncomment to re-enable push notifications
   // Foreground message handler
   const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
     handleNotificationReceived(remoteMessage);
@@ -510,6 +578,7 @@ export function setupNotificationListeners(): {
     unsubscribeForeground,
     unsubscribeNotificationOpened,
   };
+  */
 }
 
 /**

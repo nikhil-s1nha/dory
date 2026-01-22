@@ -160,15 +160,16 @@ export async function uploadPhoto(
     
     await updateDailyPhotoWidget(updatedPrompt, partner.name, isUser1);
 
+    // ARCHIVED: Push notifications disabled
     // Send notification to partner (non-blocking)
-    try {
-      const currentUser = await getUser(userId);
-      const senderName = currentUser?.name || 'Your partner';
-      await sendPhotoSharedNotification(partnerId, senderName, promptId, partnershipId);
-    } catch (error) {
-      // Don't fail photo upload if notification fails
-      console.error('Error sending photo shared notification:', error);
-    }
+    // try {
+    //   const currentUser = await getUser(userId);
+    //   const senderName = currentUser?.name || 'Your partner';
+    //   await sendPhotoSharedNotification(partnerId, senderName, promptId, partnershipId);
+    // } catch (error) {
+    //   // Don't fail photo upload if notification fails
+    //   console.error('Error sending photo shared notification:', error);
+    // }
     
     return updatedPrompt;
   } catch (error: any) {

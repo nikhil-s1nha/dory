@@ -34,9 +34,9 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.encore.candleapp"
+    namespace "com.nikhilsinha.candleapp"
     defaultConfig {
-        applicationId "com.encore.candleapp"
+        applicationId "com.nikhilsinha.candleapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

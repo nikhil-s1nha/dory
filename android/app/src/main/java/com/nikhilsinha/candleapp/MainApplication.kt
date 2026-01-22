@@ -1,4 +1,4 @@
-package com.encore.candleapp
+package com.nikhilsinha.candleapp
 
 import android.app.Application
 import com.facebook.react.PackageList

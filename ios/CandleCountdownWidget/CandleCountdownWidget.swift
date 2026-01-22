@@ -57,10 +57,12 @@ struct CountdownWidgetProvider: IntentTimelineProvider {
     }
     
     private func loadCountdownEntry(configuration: CountdownConfigurationIntent) -> CountdownWidgetEntry {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.encore.candleapp.widgets")
+        // ARCHIVED: App Groups removed for Personal Team compatibility
+        // Using standard UserDefaults - widgets won't receive data from main app
+        let standardDefaults = UserDefaults.standard
         var countdowns: [CountdownData] = []
         
-        if let countdownsJSON = sharedDefaults?.string(forKey: "countdowns"),
+        if let countdownsJSON = standardDefaults.string(forKey: "countdowns"),
            let data = countdownsJSON.data(using: .utf8) {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
