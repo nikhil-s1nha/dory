@@ -76,6 +76,16 @@ export async function setItemChecked(
   if (error) throw error;
 }
 
+/** Persist an item's edited text. Callers debounce this so it's not one write per keystroke. */
+export async function setItemText(
+  supabase: SupabaseClient,
+  id: string,
+  text: string,
+): Promise<void> {
+  const { error } = await supabase.from('shitlist_items').update({ text }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteItem(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.from('shitlist_items').delete().eq('id', id);
   if (error) throw error;

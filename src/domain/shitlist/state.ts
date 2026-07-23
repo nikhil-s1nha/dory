@@ -12,9 +12,12 @@
 
 import type { ShitlistItem } from './types';
 
-/** Newest first; ties broken by id so the order is stable across re-sorts. */
+/**
+ * Oldest first, like an Apple Notes checklist that grows downward: new items append at the bottom
+ * and you type top-to-bottom. Ties broken by id so the order is stable across re-sorts.
+ */
 export function sortItems(items: ShitlistItem[]): ShitlistItem[] {
-  return [...items].sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return [...items].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 /** Insert `item`, or replace the existing row with the same id. Result stays sorted. */
@@ -36,4 +39,9 @@ export function removeItem(items: ShitlistItem[], id: string): ShitlistItem[] {
 /** Toggle (or set) an item's checked state, returning a new array. No-op if the id is absent. */
 export function setChecked(items: ShitlistItem[], id: string, isChecked: boolean): ShitlistItem[] {
   return items.map((i) => (i.id === id ? { ...i, isChecked } : i));
+}
+
+/** Replace an item's text (inline editing). No-op if the id is absent. */
+export function setText(items: ShitlistItem[], id: string, text: string): ShitlistItem[] {
+  return items.map((i) => (i.id === id ? { ...i, text } : i));
 }

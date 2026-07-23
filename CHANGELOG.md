@@ -2,6 +2,31 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Shitlist rework — fluid Apple Notes editing + NaN fix
+
+**2026-07-23.** Addressed two issues reported from on-device testing.
+
+- **CoreGraphics NaN on item creation — fixed.** Root cause was the `expo-symbols` `SymbolView`
+  used for the checkbox circles (a known source of the "invalid numeric value (NaN)" CoreGraphics
+  warning). Replaced with plain `View`-based checkboxes; also swapped the `FlatList` for a
+  `ScrollView` (short lists, and it plays better with per-row `TextInput` focus). Verified: adding
+  a row (via live Realtime insert, the same render path) produces **no** CoreGraphics NaN in the
+  simulator syslog.
+- **Fluid editing, modeled on Apple Notes.** Each item is now an inline, multiline `TextInput`
+  (cursor moves anywhere, text wraps like normal text). **Return** adds a new item (implemented by
+  splitting on the newline so it doesn't fight the keyboard); **Return on an empty item ends the
+  list**; **Backspace on an empty item** deletes it and moves focus to the previous row. Tapping
+  the circle checks it (strikethrough, stays in place — Apple's default "manual" sort). Edits are
+  optimistic and debounced (500ms) to the server; the Realtime subscription skips the row you're
+  actively editing so a partner's echo doesn't yank your cursor. Behaviors referenced from Apple's
+  Notes checklist docs. Out of scope for v1 (per spec "no extra structure"): swipe-to-indent and
+  drag-to-reorder.
+- Domain: `sortItems` now orders oldest-first (checklist grows downward); added `setText` reducer
+  and `setItemText` repository write. Migration `0004` relaxes the text length floor so empty
+  items can exist while being edited.
+- Verified: rendered on the simulator against live data (including the partner's items syncing in
+  over Realtime from a real device); `npm test` 85/85; typecheck + lint clean.
+
 ## M4 — Drawing canvas + round-trip (Phase A)
 
 **In progress.** The canvas, tools, send, and the round-trip preload are built and verified on the

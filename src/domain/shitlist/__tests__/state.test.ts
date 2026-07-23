@@ -1,6 +1,7 @@
 import {
   removeItem,
   setChecked,
+  setText,
   sortItems,
   upsertItem,
   upsertMany,
@@ -17,9 +18,9 @@ const item = (id: string, createdAt: number, over: Partial<ShitlistItem> = {}): 
 });
 
 describe('sortItems', () => {
-  it('orders newest first', () => {
+  it('orders oldest first (checklist grows downward)', () => {
     const sorted = sortItems([item('a', 100), item('b', 300), item('c', 200)]);
-    expect(sorted.map((i) => i.id)).toEqual(['b', 'c', 'a']);
+    expect(sorted.map((i) => i.id)).toEqual(['a', 'c', 'b']);
   });
 
   it('breaks ties by id for a stable order', () => {
@@ -35,9 +36,9 @@ describe('sortItems', () => {
 });
 
 describe('upsertItem', () => {
-  it('inserts a new item in sorted position', () => {
+  it('inserts a new item in sorted (oldest-first) position', () => {
     const result = upsertItem([item('a', 100), item('c', 300)], item('b', 200));
-    expect(result.map((i) => i.id)).toEqual(['c', 'b', 'a']);
+    expect(result.map((i) => i.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('replaces an existing item by id instead of duplicating', () => {
@@ -59,7 +60,7 @@ describe('upsertMany', () => {
   it('merges a fetched batch, replacing by id', () => {
     const start = [item('a', 100, { text: 'stale' })];
     const result = upsertMany(start, [item('a', 100, { text: 'fresh' }), item('b', 200)]);
-    expect(result.map((i) => i.id)).toEqual(['b', 'a']);
+    expect(result.map((i) => i.id)).toEqual(['a', 'b']);
     expect(result.find((i) => i.id === 'a')?.text).toBe('fresh');
   });
 });
@@ -89,5 +90,18 @@ describe('setChecked', () => {
   it('is a no-op for an absent id', () => {
     const start = [item('a', 1)];
     expect(setChecked(start, 'zzz', true)).toEqual(start);
+  });
+});
+
+describe('setText', () => {
+  it('replaces the matching item text and leaves others alone', () => {
+    const result = setText([item('a', 1), item('b', 2)], 'a', 'edited');
+    expect(result.find((i) => i.id === 'a')?.text).toBe('edited');
+    expect(result.find((i) => i.id === 'b')?.text).toBe('item b');
+  });
+
+  it('is a no-op for an absent id', () => {
+    const start = [item('a', 1)];
+    expect(setText(start, 'zzz', 'x')).toEqual(start);
   });
 });
