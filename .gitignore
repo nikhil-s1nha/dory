@@ -37,6 +37,9 @@ yarn-error.*
 # Supabase management access token (never commit)
 .supabase-access-token
 
+# Spotify client secret (never commit)
+.spotify-client-secret
+
 # typescript
 *.tsbuildinfo
 
@@ -48,3 +51,9 @@ example
 
 # Project spec (local only)
 CLAUDE.md
+
+# Poller shared secret (never commit)
+.poll-secret
+
+# Supabase CLI temp
+supabase/.temp/

@@ -23,11 +23,34 @@ now-playing UI are blocked on Spotify credentials (below).
   `now_playing` uses the same couple-scoped RLS already verified in M2/M3.
 - `npm test` — 112/112; typecheck + lint clean.
 
-### Blocked — Spotify credentials needed
-- A **Spotify Developer app** (client id + secret), the app owner on **Spotify Premium** (required
-  for dev-mode API since Feb 2026), the **redirect URI** registered, and up to **5 test users**
-  added. Details flagged to the owner. The Edge Functions (connect/exchange, refresh, poll) and the
-  in-app OAuth + now-playing UI land once these exist.
+### Built — full OAuth + poller + UI (2026-07-23)
+- **Edge Functions** (`supabase/functions/`, deployed): `spotify-start` (authenticated — mints a
+  state tied to the caller, returns the authorize URL), `spotify-callback` (public — exchanges the
+  code with the client secret, stores tokens, bounces back to the app via `dory://`), `spotify-poll`
+  (secret-gated — refreshes tokens as needed, reads currently-playing, upserts `now_playing`).
+  Client id/secret + a poller secret live as Supabase function secrets; never in the repo.
+- **Cron** (`0006` state table, `0007` schedule): `pg_cron` calls `spotify-poll` every 2 min via
+  `pg_net`, with the shared secret read from **Vault** (not committed).
+- **Connect architecture**: server-side token exchange (secret never touches the app). Redirect URI
+  is the **HTTPS callback function** (`…/functions/v1/spotify-callback`) — Spotify tightened custom-
+  scheme rules in 2025, so HTTPS is used; the `dory://` scheme only bounces the browser back.
+- **App** — `src/domain/spotify/repository.ts` (start connect, connection status, disconnect, read
+  partner's now-playing) and `src/app/music.tsx`: "Connect Spotify" flow via `openAuthSessionAsync`,
+  and the partner's now-playing card ("{name} is listening to {song}"), live via Realtime.
+
+### Verified
+- Functions deployed and smoke-tested live: `spotify-poll` returns `{polled:0}` with the secret and
+  **403 without it**; `spotify-callback` bounces to `dory://…?error=missing_code`; `spotify-start`
+  (with a real user JWT) returns a valid authorize URL and creates the state row. Cron job scheduled
+  and active.
+- Music screen **rendered on the simulator** against live data: empty now-playing state + "Connect
+  Spotify" (Alex not yet connected, no partner track). Repository calls hit the live DB cleanly.
+- `npm test` — 118/118 (Spotify domain + repository); typecheck + lint clean.
+
+### Remaining (owner action + Phase B)
+- ⚠️ **Owner: register redirect URI** `https://agnslitokcyvkboiklwn.supabase.co/functions/v1/spotify-callback`
+  in the Spotify app, and add test users. Then the live connect round-trip works on device.
+- Widget display of now-playing = Phase B (with the other widgets).
 
 ## M5 — Smart-stack priority & advancement (logic)
 

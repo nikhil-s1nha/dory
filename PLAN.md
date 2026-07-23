@@ -52,7 +52,7 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M3 | Photo → widget (⚠️ needs Apple acct) | 🟡 **Phase A done** — media backend + Storage (RLS verified live), send/upload path (verified end-to-end), capture + full-view screens (rendered on sim). Phase B (App Group, expo-widgets widget, push) staged until Apple enrollment clears |
 | M4 | Drawing canvas + round-trip | 🟡 **Phase A done** — Skia canvas + tools, pure stroke model (tested), send via media pipeline, round-trip base-image preload verified on sim. Phase B (drawing widget, push) batched with M3's — see CHANGELOG |
 | M5 | Smart-stack priority & advancement | ✅ **logic complete** — pure selection/advancement (priority photo>drawing>music, per-open cycling), 15 tests. App-Group cursor persistence + widget render land in Phase B |
-| M6 | Spotify OAuth + now-playing (⚠️ needs Premium + dev app) | 🟡 **foundation done** — now-playing logic + token helpers (12 tests) + schema (owner-scoped tokens, couple-scoped now_playing) applied. OAuth flow + Edge Functions + UI blocked on Spotify credentials |
+| M6 | Spotify OAuth + now-playing (⚠️ needs Premium + dev app) | 🟢 **built + deployed** — OAuth (start/callback) + poller Edge Functions live & smoke-tested, pg_cron every 2 min, Music screen renders. Owner must register the redirect URI for the live connect round-trip; widget display is Phase B |
 | M7 | Stretch: 15s Live Activity rotation | pending |
 | M8 | Polish + full-flow pass | pending |
 
