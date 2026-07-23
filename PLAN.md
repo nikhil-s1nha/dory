@@ -47,8 +47,8 @@ affected — widgets/Live Activities stability carries forward from 56.
 | # | Milestone | Gate |
 |---|-----------|------|
 | M0 | Scaffolding, CI, architecture decision | ✅ **complete** — lint/typecheck/test green; app builds, boots, and renders on the iOS simulator |
-| M1 | Accounts, partner pairing, backend skeleton | 🟡 backend done + **live RLS verified** on cloud Supabase; client + repository wired (42 tests). Remaining: in-app auth + pairing screens — see CHANGELOG |
-| M2 | Home screen, tab bar, Shitlist | pending |
+| M1 | Accounts, partner pairing, backend skeleton | ✅ **complete** — live RLS verified on cloud Supabase; auth + pairing screens render and gate correctly on the simulator; 46 tests. One flag: email confirmation blocks real sign-ups (see CHANGELOG) |
+| M2 | Home screen, tab bar, Shitlist | next |
 | M3 | Photo → widget (⚠️ needs Apple acct) | pending |
 | M4 | Drawing canvas + round-trip | pending |
 | M5 | Smart-stack priority & advancement | pending |

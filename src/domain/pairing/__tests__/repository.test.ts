@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isValidCodeFormat } from '../invite-code';
-import { createCoupleWithInvite, redeemInvite } from '../repository';
+import {
+  createCoupleWithInvite,
+  findOutstandingInvite,
+  redeemInvite,
+} from '../repository';
 
 /**
  * A hand-rolled fake of the slice of the Supabase client the repository touches. It records
@@ -74,6 +78,60 @@ describe('createCoupleWithInvite', () => {
   it('propagates an invite-insert error', async () => {
     const { client } = makeFakeClient({ inviteInsertError: new Error('duplicate code') });
     await expect(createCoupleWithInvite(client, 'user-a', 0)).rejects.toThrow('duplicate code');
+  });
+});
+
+/**
+ * Fake for the read paths: a chainable query builder whose filter/order/limit methods are no-ops
+ * and whose `maybeSingle()` resolves to a per-table preset. Enough to exercise findOutstandingInvite
+ * without modelling PostgREST semantics.
+ */
+function makeSelectClient(presets: {
+  couple?: { data?: { id: string } | null; error?: unknown };
+  invite?: { data?: { code: string; expires_at: string } | null; error?: unknown };
+}) {
+  const builder = (result: { data: unknown; error: unknown }) => {
+    const b: Record<string, unknown> = {};
+    for (const m of ['select', 'eq', 'is', 'order', 'limit']) b[m] = () => b;
+    b.maybeSingle = async () => result;
+    return b;
+  };
+  const client = {
+    from(table: string) {
+      if (table === 'couples') return builder({ data: presets.couple?.data ?? null, error: presets.couple?.error ?? null });
+      return builder({ data: presets.invite?.data ?? null, error: presets.invite?.error ?? null });
+    },
+  };
+  return client as unknown as SupabaseClient;
+}
+
+describe('findOutstandingInvite', () => {
+  it('returns null when the user owns no couple', async () => {
+    const client = makeSelectClient({ couple: { data: null } });
+    expect(await findOutstandingInvite(client, 'user-a')).toBeNull();
+  });
+
+  it('returns null when the couple exists but has no open invite', async () => {
+    const client = makeSelectClient({ couple: { data: { id: 'c1' } }, invite: { data: null } });
+    expect(await findOutstandingInvite(client, 'user-a')).toBeNull();
+  });
+
+  it('returns the outstanding code with a parsed expiry', async () => {
+    const iso = '2026-07-22T00:00:00.000Z';
+    const client = makeSelectClient({
+      couple: { data: { id: 'c1' } },
+      invite: { data: { code: 'ABCDEFGH', expires_at: iso } },
+    });
+    expect(await findOutstandingInvite(client, 'user-a')).toEqual({
+      coupleId: 'c1',
+      code: 'ABCDEFGH',
+      expiresAt: new Date(iso).getTime(),
+    });
+  });
+
+  it('propagates a lookup error', async () => {
+    const client = makeSelectClient({ couple: { error: new Error('rls denied') } });
+    await expect(findOutstandingInvite(client, 'user-a')).rejects.toThrow('rls denied');
   });
 });
 

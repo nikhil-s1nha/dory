@@ -20,6 +20,49 @@ export interface CreateInviteResult {
   invite: Invite;
 }
 
+export interface OutstandingInvite {
+  coupleId: string;
+  code: string;
+  /** Epoch milliseconds. */
+  expiresAt: number;
+}
+
+/**
+ * Find the caller's still-open invite, if any. A user can be `member_a` of at most one couple
+ * (unique index), and if that couple were full they'd be paired and off this screen — so any
+ * couple they own here is awaiting a partner. Returns its latest unredeemed code so the pairing
+ * screen shows the existing invite instead of minting a duplicate (which the unique index rejects).
+ */
+export async function findOutstandingInvite(
+  supabase: SupabaseClient,
+  currentUserId: string,
+): Promise<OutstandingInvite | null> {
+  const { data: couple, error: coupleError } = await supabase
+    .from('couples')
+    .select('id')
+    .eq('member_a', currentUserId)
+    .maybeSingle();
+  if (coupleError) throw coupleError;
+  if (!couple) return null;
+
+  const { data: invite, error: inviteError } = await supabase
+    .from('invites')
+    .select('code, expires_at')
+    .eq('couple_id', couple.id)
+    .is('redeemed_by', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (inviteError) throw inviteError;
+  if (!invite) return null;
+
+  return {
+    coupleId: couple.id,
+    code: invite.code,
+    expiresAt: new Date(invite.expires_at).getTime(),
+  };
+}
+
 /**
  * Open a new couple for the current user (slot A) and mint an invite for the open slot B.
  * Two inserts: the couple, then the invite. RLS guarantees the caller can only place

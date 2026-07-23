@@ -92,6 +92,38 @@ client wiring pending a backend-tooling decision (below).
 - `npm test` — 42/42 pass (12 M0 + 30 pairing). `npm run typecheck`, `npm run lint` — clean.
 - iOS app rebuilt with the new native modules (AsyncStorage): Build Succeeded.
 
-### Remaining for M1 to fully close
-- App-facing auth flow (sign up / sign in) and a pairing screen (create invite / enter code),
-  gating the app by session + pairing state, smoke-tested on the simulator.
+### App-facing auth + pairing (completes M1)
+- **Session context** — `src/lib/auth-context.tsx`: tracks the Supabase session (via
+  `onAuthStateChange`) and the caller's profile (with `coupleId`); `refreshProfile` lets the
+  pairing screen flip the app into the paired state immediately after redeeming.
+- **Auth gate** — `src/app/_layout.tsx` uses `Stack.Protected` guards so the three states map
+  one-to-one: signed out → `/auth`, signed-in-but-unpaired → `/pair`, paired → `(tabs)`. The
+  native splash is held until the initial session+profile settles, so no wrong-screen flash.
+- **Screens** — `src/app/auth.tsx` (email/password sign in + sign up) and `src/app/pair.tsx`
+  (mint an invite code / enter a partner's code, with friendly per-reason error copy). The
+  scaffold's Home/Explore screens moved into an authenticated `(tabs)` group.
+- `findOutstandingInvite` added to the repository so the pair screen shows an existing code
+  instead of minting a duplicate (which the `member_a` unique index would reject).
+
+### Verified (M1 app layer)
+- App **builds, boots, and renders** on the simulator with the new native modules
+  (`expo-crypto`, `expo-clipboard`): Build Succeeded.
+- **Auth screen renders** and the gate works (no session → auth). Screenshot captured.
+- **Pair screen renders** end-to-end: injected a real Alex session, the app routed past auth to
+  `/pair` (correct gating), and the screen showed "Create a code" — meaning `findOutstandingInvite`
+  ran against the **live cloud DB from the running app**, authenticated and RLS-authorized, with
+  no runtime errors. This exercises the whole client→Supabase path, not just unit tests.
+- `npm test` — 46/46 (30 pairing incl. `findOutstandingInvite`); typecheck + lint clean.
+
+### Test accounts (seeded in the cloud project for on-device testing)
+- `alex@dory.app` / `dorytest123` (Alex) and `sam@dory.app` / `dorytest123` (Sam), both
+  pre-confirmed and unpaired. Created via SQL (with `auth.identities` + non-null token columns so
+  GoTrue accepts them). Delete anytime; they exist only to make the pairing flow testable now.
+
+### ⚠️ Flag — email confirmation blocks real sign-ups (decision needed)
+The project has `mailer_autoconfirm: false` and only the default Supabase SMTP, which emails
+**only project members** and is rate-limited. So a partner/friend **cannot self-sign-up today** —
+the confirmation email never reaches them. Options: (a) enable auto-confirm (simplest for a
+personal app; no email verification), (b) configure a real SMTP provider, or (c) switch to
+magic-link/OTP. Recommend (a) for now. Not changed yet — it's an auth-security setting on your
+project, so it's your call. Doesn't block M1 (verified with seeded accounts); does block real use.
