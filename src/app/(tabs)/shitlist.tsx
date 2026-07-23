@@ -285,8 +285,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
-  check: { color: '#fff', fontSize: 15, fontWeight: '700', lineHeight: 18 },
-  itemInput: { flex: 1, fontSize: 17, padding: 0, lineHeight: 24 },
+  check: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  // NOTE: no `lineHeight` here. lineHeight on a multiline TextInput makes iOS pass NaN to
+  // CoreGraphics ("invalid numeric value (NaN)") during text layout on focus/edit. The row uses
+  // paddingVertical + the checkbox's marginTop for alignment instead.
+  itemInput: { flex: 1, fontSize: 17, padding: 0 },
   struck: { textDecorationLine: 'line-through' },
   addLabel: { flex: 1, fontSize: 17, marginTop: 1 },
 });

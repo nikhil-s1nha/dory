@@ -27,12 +27,16 @@ render land in Phase B (with the widgets).
 
 **2026-07-23.** Addressed two issues reported from on-device testing.
 
-- **CoreGraphics NaN on item creation — fixed.** Root cause was the `expo-symbols` `SymbolView`
-  used for the checkbox circles (a known source of the "invalid numeric value (NaN)" CoreGraphics
-  warning). Replaced with plain `View`-based checkboxes; also swapped the `FlatList` for a
-  `ScrollView` (short lists, and it plays better with per-row `TextInput` focus). Verified: adding
-  a row (via live Realtime insert, the same render path) produces **no** CoreGraphics NaN in the
-  simulator syslog.
+- **CoreGraphics NaN on item creation — fixed (real cause: `lineHeight` on a multiline
+  `TextInput`).** The first pass wrongly blamed `SymbolView`; that swap (→ `View`-based checkboxes,
+  `FlatList` → `ScrollView`) was worthwhile but didn't stop the error, because the NaN fires during
+  **text layout on focus/edit**, not on render. The actual trigger is a known React Native iOS bug:
+  a `lineHeight` in a multiline `TextInput`'s style makes iOS pass NaN to CoreGraphics. Removed
+  `lineHeight` from the item input (row alignment now comes from padding + the checkbox's marginTop).
+  **Verified by reproducing the exact flow**: drove the simulator to tap "Add an item", which
+  created + autofocused a new item, then typed into it — the syslog shows **no** CoreGraphics NaN
+  (previously this threw). Reproduction used a synthetic mouse click (CoreGraphics event via ctypes)
+  since the item text is drawn pixels, not an accessible control.
 - **Fluid editing, modeled on Apple Notes.** Each item is now an inline, multiline `TextInput`
   (cursor moves anywhere, text wraps like normal text). **Return** adds a new item (implemented by
   splitting on the newline so it doesn't fight the keyboard); **Return on an empty item ends the
