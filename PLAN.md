@@ -50,7 +50,7 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M1 | Accounts, partner pairing, backend skeleton | ✅ **complete** — live RLS verified on cloud Supabase; auth + pairing screens render and gate correctly on the simulator; 46 tests. One flag: email confirmation blocks real sign-ups (see CHANGELOG) |
 | M2 | Home screen, tab bar, Shitlist | ✅ **complete** — home grid + Instagram-style tab bar + shared Shitlist (Apple Notes UX, realtime); RLS verified; rendered on simulator against live data; 64 tests |
 | M3 | Photo → widget (⚠️ needs Apple acct) | 🟡 **Phase A done** — media backend + Storage (RLS verified live), send/upload path (verified end-to-end), capture + full-view screens (rendered on sim). Phase B (App Group, expo-widgets widget, push) staged until Apple enrollment clears |
-| M4 | Drawing canvas + round-trip | pending |
+| M4 | Drawing canvas + round-trip | 🟡 **Phase A done** — Skia canvas + tools, pure stroke model (tested), send via media pipeline, round-trip base-image preload verified on sim. Phase B (drawing widget, push) batched with M3's — see CHANGELOG |
 | M5 | Smart-stack priority & advancement | pending |
 | M6 | Spotify OAuth + now-playing (⚠️ needs Premium) | pending |
 | M7 | Stretch: 15s Live Activity rotation | pending |

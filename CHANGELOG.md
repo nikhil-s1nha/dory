@@ -2,6 +2,39 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## M4 — Drawing canvas + round-trip (Phase A)
+
+**In progress.** The canvas, tools, send, and the round-trip preload are built and verified on the
+simulator; the drawing **widget** and **push** are Phase B, batched with M3's (pending Apple
+enrollment). Actual finger-strokes are best confirmed on a device (the simulator has no touch-drag
+automation available here), but the stroke model is unit-tested and the canvas renders.
+
+### Built (Phase A)
+- **Pure drawing model** — `src/domain/drawing/state.ts`: strokes + in-progress stroke with
+  `beginStroke`/`extendStroke`/`endStroke`/`undo`/`clear`/`isEmpty`, and `strokeToSvgPath`
+  (points → SVG path string Skia renders). 11 unit tests.
+- **Canvas screen** — `src/app/draw.tsx` (replaces the M2 stub): a `@shopify/react-native-skia`
+  canvas with finger drawing via `react-native-gesture-handler` `Gesture.Pan`, a color palette
+  and three stroke widths, Clear, and Send. Send snapshots the canvas (`makeImageSnapshot` →
+  base64 PNG → data URI) and ships it as a `type: 'drawing'` item through the **same M3 media
+  pipeline** (downscale/upload/record/deliver).
+- **Round-trip** — opening `dory:///draw?base=<mediaId>` loads that drawing as a Skia background
+  layer; new strokes composite on top; Send snapshots base + strokes into a new drawing sent back.
+  This is the deep-link a drawing widget/notification will trigger (spec 3.2). Header reads
+  "Draw back" in this mode.
+
+### Verified (Phase A)
+- **Rendered on the simulator**: the canvas + full toolbar (palette, widths, Clear) render with no
+  errors; the round-trip **base image loads into the canvas from a live signed URL** — proving
+  `fetchMediaById` + `getSignedUrl` + Skia `useImage` work at runtime. Screenshots captured.
+- Fixed a real bug found on-device: Skia's `<Canvas>` has no `onLayout`; size is now measured from
+  a wrapping `View`.
+- `npm test` — 83/83 (+11 drawing); typecheck + lint clean.
+
+### Phase B (shared with M3, pending Apple enrollment)
+- Drawing widget: static render of the latest drawing; tap → `dory:///draw?base=<id>` (round-trip).
+- Push dispatch to trigger the widget reload + the visible "…drew you something" notification.
+
 ## M3 — Photo → widget (Phase A)
 
 **In progress.** The capture→send→deliver→view path is built and verified; the widget itself, the
