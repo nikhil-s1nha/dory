@@ -47,7 +47,7 @@ affected — widgets/Live Activities stability carries forward from 56.
 | # | Milestone | Gate |
 |---|-----------|------|
 | M0 | Scaffolding, CI, architecture decision | ✅ **complete** — lint/typecheck/test green; app builds, boots, and renders on the iOS simulator |
-| M1 | Accounts, partner pairing, backend skeleton | 🟡 domain logic + schema + RLS test done and unit-tested (36 tests); live RLS run + client wiring pending backend-tooling decision — see CHANGELOG |
+| M1 | Accounts, partner pairing, backend skeleton | 🟡 backend done + **live RLS verified** on cloud Supabase; client + repository wired (42 tests). Remaining: in-app auth + pairing screens — see CHANGELOG |
 | M2 | Home screen, tab bar, Shitlist | pending |
 | M3 | Photo → widget (⚠️ needs Apple acct) | pending |
 | M4 | Drawing canvas + round-trip | pending |

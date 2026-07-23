@@ -74,15 +74,24 @@ client wiring pending a backend-tooling decision (below).
 - **RLS acceptance test** (`supabase/tests/0001_pairing_rls_test.sql`, pgTAP): encodes
   "a non-partner cannot read a couple's rows," members-can-read, and single-use redemption.
 
-### Verified
-- `npm test` — 36/36 pass (12 M0 + 24 new pairing tests). `npm run typecheck` and
-  `npm run lint` — clean.
-- pgTAP RLS test is written but **not yet executed** — see decision below.
+- **Client wiring** — `@supabase/supabase-js` + AsyncStorage + url-polyfill installed;
+  `src/lib/supabase.ts` configures the RN client (AsyncStorage session persistence,
+  foreground-tied auto-refresh). Public config in `.env` (from `.env.example`).
+- **Pairing repository** — `src/domain/pairing/repository.ts`: `createCoupleWithInvite`
+  (opens a couple + mints a CSPRNG invite code via `expo-crypto`) and `redeemInvite` (calls the
+  `redeem_invite` RPC, returns a typed outcome). Client injected for testability.
 
-### Flagged — decision needed before M1 closes (⚠️ real cost)
-- No Supabase CLI or Docker locally, so the live RLS test and end-to-end pairing can't run yet.
-  Choose: (a) **local stack** via Docker Desktop + Supabase CLI, or (b) **cloud** free-tier
-  Supabase project. Details in `supabase/README.md`. The migrations/tests are ready either way;
-  the choice only determines where they execute and provides the URL/anon key to wire the client.
-- `@supabase/supabase-js` client (`src/lib/supabase.ts`) intentionally deferred to land with the
-  backend decision in one native rebuild (AsyncStorage is a native module).
+### Verified
+- **Backend decision: cloud** free-tier Supabase project (ref `agnslitokcyvkboiklwn`). No Docker.
+- Migration `0001_pairing.sql` **applied** to the project via the Management API. Confirmed:
+  3 tables, 3 functions, RLS enabled on all three, 7 policies.
+- **Live RLS + redemption test passed** against the cloud DB (`tests/verify_rls_cloud.sql`):
+  non-partner sees zero couple rows and zero partner profiles (before and after pairing), members
+  see their couple, redemption is single-use (third user gets `ALREADY_REDEEMED`). The run rolled
+  back cleanly — 0 rows left behind.
+- `npm test` — 42/42 pass (12 M0 + 30 pairing). `npm run typecheck`, `npm run lint` — clean.
+- iOS app rebuilt with the new native modules (AsyncStorage): Build Succeeded.
+
+### Remaining for M1 to fully close
+- App-facing auth flow (sign up / sign in) and a pairing screen (create invite / enter code),
+  gating the app by session + pairing state, smoke-tested on the simulator.

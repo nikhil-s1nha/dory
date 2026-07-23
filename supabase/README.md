@@ -8,30 +8,44 @@ This directory holds the database as code: versioned migrations and their tests.
 - `migrations/0001_pairing.sql` — accounts, couples, invites; RLS enforcing exactly-two
   membership; the `redeem_invite` SECURITY DEFINER function (authoritative pairing logic).
 - `tests/0001_pairing_rls_test.sql` — pgTAP test for the RLS + redemption acceptance criteria,
-  including the spec's "a non-partner cannot read a couple's rows."
+  including the spec's "a non-partner cannot read a couple's rows." For a local stack.
+- `tests/verify_rls_cloud.sql` — the same acceptance criteria as a single self-contained script
+  (no pgTAP), runnable against the cloud project via the Management API or psql. It switches
+  Postgres roles to exercise RLS as each user, then rolls itself back via a sentinel exception
+  so it leaves no data. This is what was run to verify M1 against the live project.
 
 The same invariants are mirrored in pure TypeScript at `src/domain/pairing/` for instant
 client-side UX; Postgres is the source of truth.
 
-## Running it — a decision is needed (⚠️ real cost)
+## Current setup: cloud project
 
-Neither the Supabase CLI nor Docker is installed on this machine, so the live RLS test and the
-end-to-end pairing flow can't be exercised yet. Two paths:
+The app targets a free-tier cloud project (ref `agnslitokcyvkboiklwn`). Migrations are applied and
+the RLS acceptance test has been run against it (see verification below). No Docker/local stack.
 
-1. **Local stack (Docker Desktop + Supabase CLI).** `supabase start` runs the full stack in
-   Docker; `supabase test db` runs the pgTAP suite. Best for iterating on schema/RLS offline.
-   Cost: Docker Desktop is a large install with its own licensing terms for larger orgs (free
-   for personal use / small teams).
+### Applying migrations / running SQL (Management API)
 
-2. **Cloud project (free tier).** Create a project at supabase.com, link it (`supabase link`),
-   push migrations (`supabase db push`), and run the app against it. No Docker. Needs the
-   project URL + anon key wired into the app (see below). Free tier comfortably fits a couple.
+Without the Supabase CLI installed, migrations are applied by POSTing the SQL to the Management
+API `.../database/query` endpoint with a Personal Access Token kept in the gitignored file
+`.supabase-access-token` (never committed, never printed). To re-apply or run the verification:
 
-Either way the migrations and tests here are the artifact; the choice only affects where they run.
+```sh
+TOKEN=$(tr -d '[:space:]' < .supabase-access-token)
+REF=agnslitokcyvkboiklwn
+curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "$(jq -Rs '{query: .}' supabase/migrations/0001_pairing.sql)"
+```
 
-## App wiring (pending, filled in once a project exists)
+A `success` run of `tests/verify_rls_cloud.sql` returns the error `P0001: DORY_RLS_OK` — that
+sentinel is intentional (it rolls the test data back); any other error is a real failure.
 
-The app reads its Supabase URL and anon key from environment/config (`EXPO_PUBLIC_SUPABASE_URL`,
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`). The typed client lives at `src/lib/supabase.ts` and is added
-in the same change that installs `@supabase/supabase-js` (deferred so it lands with one native
-rebuild rather than interrupting the M0 simulator build).
+### Future option: local stack
+
+If offline iteration is ever wanted, install the Supabase CLI + Docker Desktop and run
+`supabase start` / `supabase test db` (which runs `tests/0001_pairing_rls_test.sql`). Docker is a
+large install; not needed for the current cloud workflow.
+
+## App wiring
+
+The client (`src/lib/supabase.ts`) reads `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+from `.env` (copy `.env.example`). These are public by design — RLS, not key secrecy, guards data.
