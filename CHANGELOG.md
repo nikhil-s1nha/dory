@@ -2,6 +2,27 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## M5 — Smart-stack priority & advancement (logic)
+
+**Completed 2026-07-23.** The pure selection logic; App-Group cursor persistence and the widget
+render land in Phase B (with the widgets).
+
+### Built
+- `src/domain/widget/stack.ts`: `WIDGET_PRIORITY` (photo > drawing > music), `orderedPresent`,
+  `itemAtCursor` (render current), `advanceStack` (advance one step per app open, cycling),
+  `cursorForType` (jump to a freshly-pushed item), and `INITIAL_CURSOR` so the first open shows
+  the top-priority item. Tolerant of stale/out-of-range cursors (wraps instead of crashing).
+
+### Verified
+- `npm test` — 15 stack tests: priority ordering for every subset; photo→drawing→music cycling
+  across opens; single-item and empty cases; content arriving/shrinking mid-cycle; cursor
+  wraparound. typecheck + lint clean.
+
+### Phase B wiring (with the widgets)
+- On app open: read the cursor from the App Group, `advanceStack`, write it back + the resolved
+  item into `state.json` for the widget.
+- On a push for a new item: `cursorForType` so the widget jumps straight to it.
+
 ## Shitlist rework — fluid Apple Notes editing + NaN fix
 
 **2026-07-23.** Addressed two issues reported from on-device testing.
