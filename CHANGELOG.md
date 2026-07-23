@@ -2,6 +2,40 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## M2 — Home screen, tab bar, Shitlist
+
+**Completed 2026-07-22.**
+
+### Built
+- **Shared Shitlist backend** — `supabase/migrations/0002_shitlist.sql`: `shitlist_items` scoped
+  to a couple, RLS so only the two members can read/write, and the table added to the Realtime
+  publication so a partner's edits sync live. Decision: the list is **shared** between partners
+  (owner's call), not private.
+- **Shitlist domain** — `src/domain/shitlist/`: a pure list-state reducer (`upsertItem`,
+  `upsertMany`, `setChecked`, `removeItem`, `sortItems` — newest first, id tie-break) that
+  reconciles optimistic edits, fetches, and Realtime echoes by id; plus a repository (fetch / add
+  with client-generated id / check / delete / `subscribeToItems`).
+- **Home screen** — `src/app/(tabs)/index.tsx`: "Dory" title over a 2x2 button grid whose uniform
+  gaps form the spec's visible plus/cross channel. Photo, Drawing, Music tiles navigate to their
+  flows; the fourth ("Soon") is a visible, disabled placeholder. `HomeButton` component.
+- **Instagram-style tab bar** — `src/app/(tabs)/_layout.tsx` on expo-router's headless `Tabs`
+  (the classic Tabs navigator was dropped in SDK 57): slim bar, hairline top border, SF Symbol
+  that weights up when active, small label. Tabs: Home, Shitlist.
+- **Shitlist screen** — `src/app/(tabs)/shitlist.tsx`: Apple Notes checklist UX — add at top, tap
+  to check (filled circle + strikethrough), long-press to delete, all optimistic with revert on
+  error, and a live Realtime subscription for the partner's changes.
+- **Feature stubs** — `photo`/`draw`/`music` routes render a shared `ComingSoon` placeholder
+  (real flows arrive M3–M5), registered as modal screens under the paired guard.
+
+### Verified
+- Shitlist RLS **verified live** on the cloud DB (`tests/verify_shitlist_rls_cloud.sql`): both
+  partners see the shared list; a non-member sees nothing and cannot insert.
+- **Rendered on the simulator against live data** (paired alex+sam, seeded items): home grid with
+  the plus gap + placeholder; tab bar switching Home↔Shitlist; Shitlist showing the couple's items
+  with a checked item struck through. Screenshots captured. No runtime errors.
+- `npm test` — 64/64 (M0–M1 + 18 shitlist); typecheck + lint clean.
+
+
 ## M0 — Scaffolding, CI, architecture decision
 
 **Completed 2026-07-22.**

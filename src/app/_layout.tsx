@@ -32,6 +32,10 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={paired}>
         <Stack.Screen name="(tabs)" />
+        {/* Feature flows opened from the home grid; real screens land in M3–M5. */}
+        <Stack.Screen name="photo" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="draw" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="music" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>
   );
