@@ -2,6 +2,33 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## M6 — Spotify OAuth + now-playing (foundation)
+
+**In progress.** The pure logic and schema are built; the OAuth flow, Edge Functions, and
+now-playing UI are blocked on Spotify credentials (below).
+
+### Built
+- **Spotify domain** (`src/domain/spotify/`): `parseCurrentlyPlaying` (currently-playing payload →
+  compact `NowPlaying`, largest album image, null when nothing/again a non-track), `hasMeaningfulChange`
+  (reload the widget only on track change or play/pause — never on mere progress, so we don't burn
+  the widget budget polling), and token-lifetime helpers (`isAccessTokenExpired` with skew,
+  `expiryFromExpiresIn`) + `SPOTIFY_SCOPES`. 12 unit tests.
+- **Schema** (`supabase/migrations/0005_spotify.sql`): `spotify_accounts` (tokens, **owner-scoped**
+  RLS — the partner never reads them; the poller uses the service role) and `now_playing`
+  (couple-scoped read so the partner sees your track; client-read-only, written by the poller).
+  Realtime enabled on `now_playing`.
+
+### Verified
+- Migration applied to the cloud project (2 tables, 2 policies, realtime on `now_playing`).
+  `now_playing` uses the same couple-scoped RLS already verified in M2/M3.
+- `npm test` — 112/112; typecheck + lint clean.
+
+### Blocked — Spotify credentials needed
+- A **Spotify Developer app** (client id + secret), the app owner on **Spotify Premium** (required
+  for dev-mode API since Feb 2026), the **redirect URI** registered, and up to **5 test users**
+  added. Details flagged to the owner. The Edge Functions (connect/exchange, refresh, poll) and the
+  in-app OAuth + now-playing UI land once these exist.
+
 ## M5 — Smart-stack priority & advancement (logic)
 
 **Completed 2026-07-23.** The pure selection logic; App-Group cursor persistence and the widget
