@@ -120,10 +120,10 @@ client wiring pending a backend-tooling decision (below).
   pre-confirmed and unpaired. Created via SQL (with `auth.identities` + non-null token columns so
   GoTrue accepts them). Delete anytime; they exist only to make the pairing flow testable now.
 
-### ⚠️ Flag — email confirmation blocks real sign-ups (decision needed)
-The project has `mailer_autoconfirm: false` and only the default Supabase SMTP, which emails
-**only project members** and is rate-limited. So a partner/friend **cannot self-sign-up today** —
-the confirmation email never reaches them. Options: (a) enable auto-confirm (simplest for a
-personal app; no email verification), (b) configure a real SMTP provider, or (c) switch to
-magic-link/OTP. Recommend (a) for now. Not changed yet — it's an auth-security setting on your
-project, so it's your call. Doesn't block M1 (verified with seeded accounts); does block real use.
+### Auth: email confirmation resolved
+The project shipped with `mailer_autoconfirm: false` + only default SMTP (emails project members
+only), which would have blocked partners/friends from signing up. **Resolved: enabled
+auto-confirm** (`mailer_autoconfirm: true`) at the owner's direction — appropriate because the
+user base is a closed, small sample, so email verification adds friction without meaningful benefit.
+Sign-up now yields an immediate session; verified via a throwaway probe account (since deleted).
+If the audience ever widens, revisit with a real SMTP provider or magic-link/OTP.
