@@ -2,6 +2,46 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## M3 — Photo → widget (Phase A)
+
+**In progress.** The capture→send→deliver→view path is built and verified; the widget itself, the
+App Group cache write, and push-triggered reload are **Phase B**, staged until the Apple Developer
+enrollment clears (App Groups + push entitlements require the paid account). The iOS simulator also
+has no camera, so live capture is only fully exercised on a device.
+
+### Built (Phase A)
+- **Media backend** — `supabase/migrations/0003_media.sql`: `media_items` (photo/drawing, sender,
+  storage path, seen state) couple-scoped with RLS; a **private `media` Storage bucket** with
+  path-based object policies (a user may only touch objects under `<their-couple-id>/…`); Realtime
+  enabled on the table.
+- **Media domain** — `src/domain/media/`: `mediaStoragePath` (pure), and a repository —
+  `sendImage` (downscale to ≤1200px JPEG via expo-image-manipulator → upload → insert row),
+  `fetchRecentMedia`, `fetchMediaById`, `getSignedUrl` (private bucket), `markSeen`. Downscaling
+  keeps bytes under the widget's 30MB ceiling end-to-end.
+- **Capture screen** — `src/app/photo.tsx`: camera opens immediately (permission-gated), shutter →
+  review (retake/send) → `sendImage` → back. Low-friction per spec 3.1.
+- **Full-view screen** — `src/app/media/[id].tsx`: the widget's deep-link target
+  (`dory:///media/<id>`) and in-app viewer; resolves a signed URL, displays the image, marks seen.
+- Camera permission wired via the `expo-camera` config plugin in `app.json`.
+
+### Verified (Phase A)
+- Media + Storage RLS **verified live** (`tests/verify_media_rls_cloud.sql`): partner sees the
+  couple's rows AND objects; non-member sees neither and cannot write under the couple path.
+- **Full send/receive data path verified end-to-end against live Storage** (REST, as alex→sam):
+  authorized upload (200) → row insert (201) → partner signs a URL and downloads → **200, byte-exact**
+  (284/284); non-member sign blocked.
+- **Rendered on the simulator**: full-view screen displays a real seeded photo (private object via
+  signed URL, deep-linked); capture screen shows the camera UI + shutter (feed black on sim — no
+  camera). Screenshots captured.
+- `npm test` — 72/72 (+ media path & repository suites); typecheck + lint clean.
+
+### Phase B — pending Apple enrollment
+- App Group entitlement + container write (the widget-cache seam in `src/constants/app-group.ts`).
+- `expo-widgets` widget: render the latest photo, tap → `dory:///media/<id>`. (First real
+  expo-widgets test; App-Group `state.json` keeps a Swift fallback cheap if needed.)
+- Push dispatch (Edge Function) to trigger the widget timeline reload on the recipient's device,
+  plus the visible "…sent you a photo" notification (the reliable channel).
+
 ## M2 — Home screen, tab bar, Shitlist
 
 **Completed 2026-07-22.**

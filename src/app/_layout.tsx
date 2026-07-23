@@ -36,6 +36,8 @@ function RootNavigator() {
         <Stack.Screen name="photo" options={{ presentation: 'modal' }} />
         <Stack.Screen name="draw" options={{ presentation: 'modal' }} />
         <Stack.Screen name="music" options={{ presentation: 'modal' }} />
+        {/* Full-screen photo/drawing view — the widget's deep-link target (dory:///media/<id>). */}
+        <Stack.Screen name="media/[id]" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
     </Stack>
   );

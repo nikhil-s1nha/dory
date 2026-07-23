@@ -49,7 +49,7 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M0 | Scaffolding, CI, architecture decision | ✅ **complete** — lint/typecheck/test green; app builds, boots, and renders on the iOS simulator |
 | M1 | Accounts, partner pairing, backend skeleton | ✅ **complete** — live RLS verified on cloud Supabase; auth + pairing screens render and gate correctly on the simulator; 46 tests. One flag: email confirmation blocks real sign-ups (see CHANGELOG) |
 | M2 | Home screen, tab bar, Shitlist | ✅ **complete** — home grid + Instagram-style tab bar + shared Shitlist (Apple Notes UX, realtime); RLS verified; rendered on simulator against live data; 64 tests |
-| M3 | Photo → widget (⚠️ needs Apple acct) | pending |
+| M3 | Photo → widget (⚠️ needs Apple acct) | 🟡 **Phase A done** — media backend + Storage (RLS verified live), send/upload path (verified end-to-end), capture + full-view screens (rendered on sim). Phase B (App Group, expo-widgets widget, push) staged until Apple enrollment clears |
 | M4 | Drawing canvas + round-trip | pending |
 | M5 | Smart-stack priority & advancement | pending |
 | M6 | Spotify OAuth + now-playing (⚠️ needs Premium) | pending |
