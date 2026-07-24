@@ -47,10 +47,18 @@ now-playing UI are blocked on Spotify credentials (below).
   Spotify" (Alex not yet connected, no partner track). Repository calls hit the live DB cleanly.
 - `npm test` — 118/118 (Spotify domain + repository); typecheck + lint clean.
 
-### Remaining (owner action + Phase B)
-- ⚠️ **Owner: register redirect URI** `https://agnslitokcyvkboiklwn.supabase.co/functions/v1/spotify-callback`
-  in the Spotify app, and add test users. Then the live connect round-trip works on device.
-- Widget display of now-playing = Phase B (with the other widgets).
+### ✅ Verified LIVE end-to-end (2026-07-24)
+Owner registered the redirect URI and connected a real Spotify account (as Alex). Confirmed the
+whole chain with real data:
+- OAuth round-trip completed; tokens stored; `spotify_accounts` row valid with the right scopes.
+- The 2-min cron poller captured Alex's real current track and updated it on a song change
+  (Cariad → All I Want) — polling + refresh working.
+- **From the partner (Sam), the Music screen shows the album art, title, artist, and "Alex is
+  listening to All I Want"** — the spec's exact copy. RLS confirmed: Sam reads Alex's `now_playing`
+  but **cannot** read Alex's tokens (owner-only).
+
+Spec 3.3 delivered in-app. Remaining: widget display of now-playing = Phase B (with the widgets).
+Minor: a dev-only "view warnings" toast appeared on the Music screen — non-blocking, to check later.
 
 ## M5 — Smart-stack priority & advancement (logic)
 
