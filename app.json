@@ -40,6 +40,23 @@
         {
           "cameraPermission": "Dory uses the camera so you can send your partner a photo."
         }
+      ],
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.nikhilsinha.dory.widgets",
+          "groupIdentifier": "group.com.nikhilsinha.dory",
+          "enablePushNotifications": true,
+          "src": "./widgets",
+          "widgets": [
+            {
+              "name": "DoryWidget",
+              "displayName": "Dory",
+              "description": "A little window into what your partner is up to.",
+              "supportedFamilies": ["systemSmall", "systemMedium", "systemLarge"]
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
