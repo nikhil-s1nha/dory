@@ -6,16 +6,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useWidgetSync } from '@/hooks/use-widget-sync';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
  * Instagram-style bottom tab bar for the paired app: a slim bar with a hairline top border, an
  * icon that fills when active, and a small label. Built on expo-router's headless Tabs so we
- * fully control the bar's look (the classic Tabs navigator was dropped in SDK 57).
+ * fully control the bar's look (the classic Tabs navigator was dropped in SDK 57). Also mounts
+ * `useWidgetSync`, which advances the smart stack and refreshes the home-screen widget on open.
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const colors = useTheme();
+  useWidgetSync();
 
   return (
     <Tabs>

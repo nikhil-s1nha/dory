@@ -57,3 +57,9 @@ CLAUDE.md
 
 # Supabase CLI temp
 supabase/.temp/
+
+# Apple Team ID (not secret, but keep local)
+.apple-team-id
+
+# APNs auth key (never commit)
+.apns-key.p8
