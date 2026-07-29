@@ -84,7 +84,14 @@ export default function MusicScreen() {
     try {
       const url = await startSpotifyConnect(supabase);
       const result = await WebBrowser.openAuthSessionAsync(url, RETURN_URL);
-      if (result.type === 'success') await refreshConnected();
+      // Re-check on both 'success' (the dory:// return URL was hit) and 'dismiss' (the user may have
+      // closed the sheet after the token exchange already completed server-side). Either way, pull
+      // fresh state so the UI flips to Connected without leaving/reopening the screen. If nothing
+      // actually connected, isSpotifyConnected stays false and the Connect button remains for retry.
+      if (result.type === 'success' || result.type === 'dismiss') {
+        await refreshConnected();
+        await refreshPartner();
+      }
     } catch {
       /* surfaced via the still-showing Connect button */
     } finally {
@@ -150,9 +157,11 @@ export default function MusicScreen() {
             <ActivityIndicator color={colors.text} />
           ) : connected ? (
             <>
-              <ThemedText type="small" themeColor="textSecondary">
-                Your Spotify is connected.
-              </ThemedText>
+              <View style={[styles.connectedPill, { backgroundColor: '#1DB954' }]}>
+                <ThemedText type="smallBold" style={styles.onGreen}>
+                  Spotify connected ✓
+                </ThemedText>
+              </View>
               <Pressable onPress={disconnect} disabled={busy} hitSlop={8}>
                 <ThemedText type="link">Disconnect</ThemedText>
               </Pressable>
@@ -188,6 +197,7 @@ const styles = StyleSheet.create({
   caption: { marginTop: Spacing.three, textAlign: 'center' },
   idle: { textAlign: 'center', paddingVertical: Spacing.five },
   connectRow: { alignItems: 'center', gap: Spacing.three },
+  connectedPill: { borderRadius: 999, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three, alignItems: 'center', minWidth: 200 },
   button: { borderRadius: 999, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three, alignItems: 'center', minWidth: 200 },
   onGreen: { color: '#fff' },
   dim: { opacity: 0.6 },

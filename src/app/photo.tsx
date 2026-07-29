@@ -100,7 +100,9 @@ export default function PhotoScreen() {
               {sending ? (
                 <ActivityIndicator color="#000" />
               ) : (
-                <ThemedText type="smallBold">Send</ThemedText>
+                <ThemedText type="smallBold" style={styles.sendLabel}>
+                  Send
+                </ThemedText>
               )}
             </Pressable>
           </View>
@@ -167,5 +169,6 @@ const styles = StyleSheet.create({
     minWidth: 120,
     alignItems: 'center',
   },
+  sendLabel: { color: '#000000' },
   error: { color: '#ff6b6b', textAlign: 'center' },
 });

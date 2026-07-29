@@ -1,5 +1,6 @@
 import {
   Canvas,
+  Fill,
   Image as SkiaImage,
   Path,
   Skia,
@@ -7,9 +8,10 @@ import {
   useImage,
 } from '@shopify/react-native-skia';
 import { randomUUID } from 'expo-crypto';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,7 +32,7 @@ import { fetchMediaById, getSignedUrl, sendImage } from '@/domain/media/reposito
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
-const PALETTE = ['#000000', '#FF3B30', '#007AFF', '#34C759', '#FFCC00', '#FFFFFF'];
+const PALETTE = ['#FFFFFF', '#000000', '#FF3B30', '#007AFF', '#34C759', '#FFCC00'];
 const WIDTHS = [3, 8, 16];
 
 /**
@@ -90,16 +92,23 @@ export default function DrawScreen() {
     if (!base64) return;
     setSending(true);
     try {
+      // Write the snapshot to a real temp file — passing a huge data URI straight into
+      // expo-image-manipulator (inside sendImage) hangs on device; a file:// URI is reliable.
+      const uri = FileSystem.cacheDirectory + 'drawing-' + Date.now() + '.png';
+      await FileSystem.writeAsStringAsync(uri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       await sendImage(supabase, {
         coupleId: profile.coupleId,
         senderId: session.user.id,
         type: 'drawing',
-        localUri: `data:image/png;base64,${base64}`,
+        localUri: uri,
         now: Date.now(),
       });
       router.back();
-    } catch {
+    } catch (e) {
       setSending(false);
+      Alert.alert('Could not send', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -131,6 +140,7 @@ export default function DrawScreen() {
           onLayout={(e) => setCanvasSize(e.nativeEvent.layout)}>
           <GestureDetector gesture={pan}>
             <Canvas ref={canvasRef} style={styles.canvas}>
+              <Fill color="#000000" />
               {baseImage && canvasSize.width > 0 && (
               <SkiaImage
                 image={baseImage}
@@ -177,12 +187,22 @@ export default function DrawScreen() {
           </View>
           <View style={styles.widths}>
             {WIDTHS.map((w) => (
-              <Pressable key={w} onPress={() => setWidth(w)} style={styles.widthBtn}>
-                <View style={[styles.widthDot, { width: w + 6, height: w + 6, borderRadius: (w + 6) / 2 }, width === w && styles.widthActive]} />
+              <Pressable
+                key={w}
+                onPress={() => setWidth(w)}
+                style={[styles.widthBtn, width === w && styles.widthBtnActive]}>
+                <View
+                  style={[
+                    styles.widthDot,
+                    { width: w + 6, height: w + 6, borderRadius: (w + 6) / 2 },
+                  ]}
+                />
               </Pressable>
             ))}
-            <Pressable onPress={() => setDrawing((d) => clear(d))} hitSlop={8} style={styles.clearBtn}>
-              <ThemedText type="small">Clear</ThemedText>
+            <Pressable onPress={() => setDrawing((d) => clear(d))} style={styles.clearBtn}>
+              <ThemedText type="small" style={styles.clearText}>
+                Clear
+              </ThemedText>
             </Pressable>
           </View>
         </View>
@@ -204,13 +224,44 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.35 },
   canvasWrap: { flex: 1 },
   canvas: { flex: 1 },
-  toolbar: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, gap: Spacing.three },
+  toolbar: {
+    backgroundColor: '#1C1C1E',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.four,
+    gap: Spacing.four,
+  },
   swatches: { flexDirection: 'row', gap: Spacing.three, justifyContent: 'center' },
-  swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#8888' },
-  swatchActive: { borderWidth: 3, borderColor: '#007AFF' },
-  widths: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.four },
-  widthBtn: { padding: Spacing.two },
-  widthDot: { backgroundColor: '#000' },
-  widthActive: { backgroundColor: '#007AFF' },
-  clearBtn: { marginLeft: Spacing.three },
+  swatch: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: '#48484A',
+  },
+  swatchActive: { borderWidth: 3, borderColor: '#FFFFFF' },
+  widths: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
+  widthBtn: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#48484A',
+    backgroundColor: '#2C2C2E',
+  },
+  widthBtnActive: { borderColor: '#FFFFFF', backgroundColor: '#3A3A3C' },
+  widthDot: { backgroundColor: '#FFFFFF' },
+  clearBtn: {
+    marginLeft: Spacing.three,
+    height: 48,
+    paddingHorizontal: Spacing.four,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#48484A',
+    backgroundColor: '#2C2C2E',
+  },
+  clearText: { color: '#FFFFFF' },
 });

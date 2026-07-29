@@ -3,6 +3,7 @@ import {
   aspectRatio,
   clipped,
   clipShape,
+  containerBackground,
   font,
   foregroundStyle,
   frame,
@@ -16,6 +17,10 @@ import { createWidget, type WidgetEnvironment } from 'expo-widgets';
  * drawing, or the partner's music — from props the app pushes via `updateSnapshot`. Images are
  * local files the app has already written into the App Group container (see the widget-sync module);
  * the widget never touches the network. Tapping opens the app at `deepLink`.
+ *
+ * NOTE: iOS 17+ requires every widget to declare its background via `containerBackground(..'widget')`
+ * — without it the widget refuses to render and shows "Please adopt containerBackground API". We use
+ * a consistent black background (photos/drawings fill it; text is light for contrast).
  */
 export type DoryWidgetProps = {
   kind: 'photo' | 'drawing' | 'music' | 'empty';
@@ -31,6 +36,10 @@ export type DoryWidgetProps = {
   deepLink?: string;
 };
 
+const BG = '#000000';
+const TEXT = '#FFFFFF';
+const MUTED = '#AEAEB2';
+
 const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => {
   'widget';
 
@@ -39,7 +48,12 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
     return (
       <Image
         uiImage={props.imageFile}
-        modifiers={[resizable(), aspectRatio({ contentMode: 'fill' }), clipped(true)]}
+        modifiers={[
+          resizable(),
+          aspectRatio({ contentMode: 'fill' }),
+          clipped(true),
+          containerBackground(BG, 'widget'),
+        ]}
       />
     );
   }
@@ -47,7 +61,7 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
   // Music: album art beside the track + a caption.
   if (props.kind === 'music' && props.title) {
     return (
-      <HStack modifiers={[padding({ all: 12 })]}>
+      <HStack modifiers={[padding({ all: 12 }), containerBackground(BG, 'widget')]}>
         {props.imageFile ? (
           <Image
             uiImage={props.imageFile}
@@ -55,13 +69,15 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
           />
         ) : null}
         <VStack modifiers={[padding({ leading: 10 })]}>
-          <Text modifiers={[font({ size: 15, weight: 'semibold' })]}>{props.title}</Text>
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>
+            {props.title}
+          </Text>
           {props.subtitle ? (
-            <Text modifiers={[font({ size: 13 }), foregroundStyle('#8E8E93')]}>{props.subtitle}</Text>
+            <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED)]}>{props.subtitle}</Text>
           ) : null}
           <Spacer />
           {props.caption ? (
-            <Text modifiers={[font({ size: 12 }), foregroundStyle('#8E8E93')]}>{props.caption}</Text>
+            <Text modifiers={[font({ size: 12 }), foregroundStyle(MUTED)]}>{props.caption}</Text>
           ) : null}
         </VStack>
         <Spacer />
@@ -71,10 +87,10 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
 
   // Empty: nothing to show yet.
   return (
-    <VStack modifiers={[padding({ all: 16 })]}>
+    <VStack modifiers={[padding({ all: 16 }), containerBackground(BG, 'widget')]}>
       <Spacer />
-      <Text modifiers={[font({ size: 15, weight: 'semibold' })]}>Dory</Text>
-      <Text modifiers={[font({ size: 13 }), foregroundStyle('#8E8E93')]}>
+      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>Dory</Text>
+      <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED)]}>
         Open to see what your partner is up to.
       </Text>
       <Spacer />

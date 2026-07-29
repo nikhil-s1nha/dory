@@ -10,9 +10,19 @@ const APP_RETURN = 'dory://spotify-auth-callback';
 /** Return an HTML page that navigates back to the app (reliable across the in-app auth browser). */
 function backToApp(query: string): Response {
   const target = `${APP_RETURN}?${query}`;
-  const html = `<!doctype html><meta name="viewport" content="width=device-width">
-<script>location.replace(${JSON.stringify(target)})</script>
-<p style="font:16px -apple-system;padding:24px">You can return to Dory now. <a href="${target}">Tap here</a> if it doesn't happen automatically.</p>`;
+  const targetJs = JSON.stringify(target);
+  const targetAttr = target.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  // Fire the redirect as early and by as many mechanisms as possible so the in-app auth browser
+  // auto-closes with no user tap: an inline <script> at the very top of the document runs first,
+  // and a <meta http-equiv="refresh"> in the <head> covers the case where script is blocked.
+  const html = `<!doctype html><html><head>
+<script>location.replace(${targetJs})</script>
+<meta http-equiv="refresh" content="0;url=${targetAttr}">
+<meta name="viewport" content="width=device-width">
+</head><body>
+<p style="font:16px -apple-system;padding:24px">Signed in. <a href="${targetAttr}">Return to Dory</a> if this doesn't happen automatically.</p>
+<script>location.replace(${targetJs})</script>
+</body></html>`;
   return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
