@@ -7,23 +7,23 @@ import { exchangeCode } from '../_shared/spotify.ts';
 
 const APP_RETURN = 'dory://spotify-auth-callback';
 
-/** Return an HTML page that navigates back to the app (reliable across the in-app auth browser). */
+/**
+ * Bounce the browser back into the app via a real HTTP 302 redirect to the dory:// scheme.
+ * iOS ASWebAuthenticationSession (used by expo-web-browser's openAuthSessionAsync) IGNORES
+ * JavaScript- and <meta refresh>-initiated navigations to a custom URL scheme; it only auto-closes
+ * on an actual HTTP redirect whose Location is the callback scheme (or a real link tap). So we must
+ * return a 302 with Location set to the app scheme. A tiny HTML body is included as a manual fallback.
+ */
 function backToApp(query: string): Response {
   const target = `${APP_RETURN}?${query}`;
-  const targetJs = JSON.stringify(target);
   const targetAttr = target.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-  // Fire the redirect as early and by as many mechanisms as possible so the in-app auth browser
-  // auto-closes with no user tap: an inline <script> at the very top of the document runs first,
-  // and a <meta http-equiv="refresh"> in the <head> covers the case where script is blocked.
-  const html = `<!doctype html><html><head>
-<script>location.replace(${targetJs})</script>
-<meta http-equiv="refresh" content="0;url=${targetAttr}">
-<meta name="viewport" content="width=device-width">
-</head><body>
+  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body>
 <p style="font:16px -apple-system;padding:24px">Signed in. <a href="${targetAttr}">Return to Dory</a> if this doesn't happen automatically.</p>
-<script>location.replace(${targetJs})</script>
 </body></html>`;
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return new Response(html, {
+    status: 302,
+    headers: { Location: target, 'Content-Type': 'text/html; charset=utf-8' },
+  });
 }
 
 Deno.serve(async (req) => {

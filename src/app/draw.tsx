@@ -177,12 +177,10 @@ export default function DrawScreen() {
               <Pressable
                 key={c}
                 onPress={() => setColor(c)}
-                style={[
-                  styles.swatch,
-                  { backgroundColor: c },
-                  color === c && styles.swatchActive,
-                ]}
-              />
+                hitSlop={6}
+                style={[styles.swatchHit, color === c && styles.swatchHitActive]}>
+                <View style={[styles.swatch, { backgroundColor: c }]} />
+              </Pressable>
             ))}
           </View>
           <View style={styles.widths}>
@@ -190,16 +188,21 @@ export default function DrawScreen() {
               <Pressable
                 key={w}
                 onPress={() => setWidth(w)}
-                style={[styles.widthBtn, width === w && styles.widthBtnActive]}>
+                hitSlop={6}
+                style={styles.widthBtn}>
                 <View
                   style={[
                     styles.widthDot,
-                    { width: w + 6, height: w + 6, borderRadius: (w + 6) / 2 },
+                    { width: w + 4, height: w + 4, borderRadius: (w + 4) / 2 },
+                    width !== w && styles.widthDotInactive,
                   ]}
                 />
               </Pressable>
             ))}
-            <Pressable onPress={() => setDrawing((d) => clear(d))} style={styles.clearBtn}>
+            <Pressable
+              onPress={() => setDrawing((d) => clear(d))}
+              hitSlop={6}
+              style={styles.clearBtn}>
               <ThemedText type="small" style={styles.clearText}>
                 Clear
               </ThemedText>
@@ -225,43 +228,40 @@ const styles = StyleSheet.create({
   canvasWrap: { flex: 1 },
   canvas: { flex: 1 },
   toolbar: {
-    backgroundColor: '#1C1C1E',
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
-    gap: Spacing.four,
+    paddingVertical: Spacing.three,
+    gap: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
-  swatches: { flexDirection: 'row', gap: Spacing.three, justifyContent: 'center' },
-  swatch: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 2,
-    borderColor: '#48484A',
+  swatches: { flexDirection: 'row', justifyContent: 'center' },
+  // 40px tap target wrapping a smaller visible swatch; active shows a subtle ring.
+  swatchHit: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  swatchActive: { borderWidth: 3, borderColor: '#FFFFFF' },
-  widths: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
+  swatchHitActive: { borderColor: 'rgba(255,255,255,0.9)' },
+  swatch: { width: 22, height: 22, borderRadius: 11 },
+  widths: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   widthBtn: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#48484A',
-    backgroundColor: '#2C2C2E',
   },
-  widthBtnActive: { borderColor: '#FFFFFF', backgroundColor: '#3A3A3C' },
   widthDot: { backgroundColor: '#FFFFFF' },
+  widthDotInactive: { backgroundColor: 'rgba(255,255,255,0.4)' },
   clearBtn: {
-    marginLeft: Spacing.three,
-    height: 48,
-    paddingHorizontal: Spacing.four,
+    marginLeft: Spacing.two,
+    height: 40,
+    paddingHorizontal: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#48484A',
-    backgroundColor: '#2C2C2E',
   },
-  clearText: { color: '#FFFFFF' },
+  clearText: { color: 'rgba(255,255,255,0.6)' },
 });

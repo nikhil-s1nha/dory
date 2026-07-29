@@ -36,12 +36,14 @@ export type DoryWidgetProps = {
   deepLink?: string;
 };
 
-const BG = '#000000';
-const TEXT = '#FFFFFF';
-const MUTED = '#AEAEB2';
-
 const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => {
   'widget';
+
+  // Defined INSIDE the component: the 'widget' directive serializes only the function body into the
+  // widget runtime, so module-scope constants aren't visible here (they throw ReferenceError).
+  const BG = '#000000';
+  const TEXT = '#FFFFFF';
+  const MUTED = '#AEAEB2';
 
   // Photo & drawing: fill the widget with the image.
   if ((props.kind === 'photo' || props.kind === 'drawing') && props.imageFile) {
