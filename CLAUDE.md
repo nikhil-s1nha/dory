@@ -1,7 +1,6 @@
 # Dory
 
-Expo SDK 57 (RN 0.86) iOS app for long-distance couples: a partner's photo, drawing, or now-playing
-track rendered on a home-screen widget via `expo-widgets` + an iOS App Group, backed by Supabase.
+Expo SDK 57 (RN 0.86) iOS app for long-distance couples: a partner's photo, drawing, or now-playing track on a home-screen widget via `expo-widgets` + an iOS App Group, backed by Supabase.
 Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md](./CHANGELOG.md).
 
 ## Commands
@@ -9,7 +8,11 @@ Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md]
 - `npm run lint` / `npm run typecheck` / `npm test` — run all three; fixing a lint error routinely breaks types (and vice versa).
 - `npm run ios` — simulator build. `npx expo prebuild` first if you added a native module or config plugin; JS-only changes need nothing but a Metro reload.
 - `npx expo run:ios --device <udid> --configuration Release` — device build. First run on a *new* device fails signing; see `.claude/skills/ios-device-build/`.
-- Milestone work goes on `expoApproach`; `main` stays clean.
+
+## Commits
+
+- One commit per verified unit of work, with lint/typecheck/test green — never a whole milestone in one, never a red gate.
+- Conventional format: `feat/fix/chore(scope): summary`. Work on `expoApproach`; `main` is an empty root commit and stays clean.
 
 ## Build / environment gotchas
 
