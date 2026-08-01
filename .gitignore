@@ -49,9 +49,6 @@ example
 /ios
 /android
 
-# Project spec (local only)
-CLAUDE.md
-
 # Poller shared secret (never commit)
 .poll-secret
 

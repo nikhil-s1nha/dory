@@ -1,0 +1,75 @@
+---
+name: widget-debugging
+description: Diagnose the expo-widgets home-screen widget — blank renders, containerBackground errors, silently-empty App Group containers, the 'widget' directive transform, and what can and cannot be verified on the simulator. Use when the widget doesn't render or shows stale/no data.
+---
+
+# Debugging the Dory widget
+
+The pipeline is: app foreground → `useWidgetSync` → `syncWidgetOnOpen` (`src/lib/widget-sync.ts`)
+downloads the chosen image into the App Group container → `DoryWidget.updateSnapshot(props)` →
+WidgetKit renders `widgets/dory-widget.tsx`. The widget itself never touches the network.
+
+## Ground truth is the App Group container, not the logs
+
+`console.log` from the app frequently does not stream to Metro in this setup. Don't build a debug
+loop on it. Instead:
+
+- Screenshot the app (a redbox will otherwise look like "the sync silently did nothing").
+- Inspect the container on disk: `group.com.nikhilsinha.dory/ExpoWidgets/` should hold
+  `photo-<id>.jpg` / `drawing-<id>.jpg` / `album.jpg` plus the snapshot `.plist`.
+
+`syncWidgetOnOpen` ends in a bare `catch { /* leave last good snapshot */ }`, which swallows the real
+error. If the container is empty and nothing crashed, temporarily add stage-by-stage logging plus
+`catch (e) { console.log('[widget-sync] ERROR', String(e)) }` — then remove it once fixed.
+
+## The four failure modes we actually hit
+
+**1. `createWidget` throws "the 2nd argument cannot be cast to String".**
+The `'widget'` directive is a Babel transform (`babel-preset-expo`'s `widgets-plugin`) that replaces
+the component with a string bundle reference. With no `babel.config.js` the plugin isn't guaranteed
+to run and the raw function reaches native. `babel.config.js` exists for exactly this reason — do not
+delete it, and clear the Metro cache after touching it.
+
+**2. `ReferenceError: Can't find variable: <X>` inside the widget.**
+The directive serializes only the component's **function body**. Module-scope constants declared above
+the component are not in scope in the widget runtime. Everything the widget reads must live inside the
+`DoryWidget` function body (this is why the colour constants sit there).
+
+**3. "Please adopt containerBackground API" instead of a render.**
+iOS 17+ requires the **top-level** view WidgetKit renders to declare a container background.
+expo-widgets never applies one (expo/expo#46200), and a JS-level `containerBackground` modifier on an
+inner node is never seen at the top level. Fixed by `patches/expo-widgets+57.0.6.patch`, which splits
+`WidgetsEntryView.body` into a `@ViewBuilder content` and wraps it with an availability-guarded
+`.containerBackground(for: .widget)`. It auto-applies via the `postinstall` script.
+
+If you regenerate that patch: `patch-package` will also capture the generated `ExpoWidgets.bundle`
+build artifact inside `node_modules/expo-widgets`, producing a ~149KB patch. Remove the artifact
+first so the patch stays the ~31 lines of Swift it should be.
+
+**4. The widget never appears in the simulator's widget gallery.**
+This is an Apple-documented Simulator bug ("widgets might not appear in the widget gallery when using
+Simulator"), not your code and not your UI automation. Reboot + reinstall does not help. Deployment
+target mismatch is the *other* known cause — ours are all 16.4, so it's ruled out. Verify the data
+pipeline on the simulator; verify rendering on a physical device (see `ios-device-build`).
+
+Corollary: don't burn turns on coordinate-clicking the gallery open. That loop was explicitly called
+out as a rabbit hole — search for the platform bug first.
+
+## Known open issue
+
+The smart stack (photo → drawing → music, one step per app open) computes correctly — see
+`src/domain/widget/stack.ts` and its tests, cursor in AsyncStorage under `dory.widget.cursor` starting
+at `-1` — but does not visibly cycle on device. Suspected: `updateSnapshot` hands WidgetKit new
+content without forcing a repaint of the *live* home-screen widget, and WidgetKit owns timing via its
+budget. Candidate fixes: call `reload()` rather than only `updateSnapshot`, move to a real
+`updateTimeline`, and/or advance the cursor on app **background** so the next glance is already fresh
+(today it advances on foreground, i.e. while the user is looking at the app, not the widget).
+
+## macOS automation, if you do need to drive the simulator
+
+- AppleScript/System Events needs **Automation** permission (keystrokes) — enough to dismiss iOS's
+  "Open in Dory?" alert on a `simctl openurl` deep link, since "Open" is the default button.
+- Coordinate **clicking** through System Events additionally needs **Accessibility** permission and
+  otherwise fails with `-25204`. Posting a synthetic mouse event through CoreGraphics from Python
+  `ctypes` works without it.
+- Flag either permission to the user *before* the step that needs it.
