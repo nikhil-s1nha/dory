@@ -1,6 +1,6 @@
 {
+  "includeCoAuthoredBy": false,
   "enabledPlugins": {
     "expo@claude-plugins-official": true
-  },
-  "includeCoAuthoredBy": false
+  }
 }
