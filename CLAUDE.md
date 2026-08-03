@@ -31,7 +31,15 @@ Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md]
 - `containerBackground` is applied by a patch-package patch to `expo-widgets` (expo/expo#46200); a JS-level modifier alone does not satisfy WidgetKit. Regenerate patches excluding `ExpoWidgets.bundle`.
 - After any change to the widget extension, long-press the widget → Remove → re-add; a placed widget holds stale extension state.
 - Widgets often never appear in the **simulator's** widget gallery (Apple-documented). Verify the data pipeline on the simulator, visuals on device. The simulator also has no camera.
-- Known open: the smart stack doesn't visibly cycle on device — `updateSnapshot` may not force a live repaint (WidgetKit owns timing).
+- **Widget images must be ≤600px on the long edge** (`WIDGET_RENDER_MAX_DIMENSION`). The extension
+  shares a ~30MB budget with the expo-widgets **JS runtime**, so the real headroom is far less than
+  30MB: measured on device, 4.0MB decoded rendered and 5.5MB did not. An over-budget render fails
+  **silently** — no crash, no jetsam entry, no red box. WidgetKit just keeps displaying the last good
+  snapshot, which reads exactly like "the widget is frozen". The cap is applied when writing into the
+  App Group (`downloadToAppGroup`), not only at upload, so already-stored media is fixed too.
+- Widget props carry an `_imageDebug` field the component ignores. It exists because the App Group
+  plist is the *only* channel readable from the host — Metro logs don't stream, and `devicectl`'s
+  app-group domain exposes only the `Library` subtree, never `ExpoWidgets/`.
 
 ## Backend / accounts — see `.claude/skills/supabase-ops/`
 

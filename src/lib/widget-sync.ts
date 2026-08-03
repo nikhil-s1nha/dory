@@ -8,7 +8,10 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { widgetsDirectory } from 'expo-widgets';
+
+import { WIDGET_RENDER_MAX_DIMENSION } from '@/constants/app-group';
 
 import DoryWidget, { type DoryWidgetProps } from '../../widgets/dory-widget';
 import { fetchPartnerNowPlaying } from '@/domain/spotify/repository';
@@ -20,13 +23,60 @@ import { supabase } from '@/lib/supabase';
 
 const CURSOR_KEY = 'dory.widget.cursor';
 
-/** Download `url` into the App Group under `filename`, replacing any existing copy; return its uri. */
+/** What the last downscale produced, surfaced through the widget props for on-device diagnosis. */
+let lastImageDebug: string | undefined;
+
+/**
+ * Download `url` into the App Group under `filename`, downscaled to a size the widget extension can
+ * actually decode; return its uri.
+ *
+ * The downscale is the whole point. The extension shares a ~30MB budget with the expo-widgets JS
+ * runtime, and a 1200px image (~7.7MB decoded) is enough to push a render over it. When that
+ * happens nothing announces itself — no crash, no log — WidgetKit just keeps showing the previous
+ * snapshot. Capping here rather than at upload also repairs media already sitting in Storage.
+ */
 async function downloadToAppGroup(url: string, filename: string): Promise<string> {
   const dir = new Directory(widgetsDirectory);
   const target = new File(dir, filename);
   if (target.exists) target.delete();
-  await File.downloadFileAsync(url, target);
-  return target.uri;
+
+  // Download beside the target first: the original is what we measure, and only the downscaled
+  // derivative should ever appear under the name the widget reads.
+  const staged = new File(dir, `staging-${filename}`);
+  if (staged.exists) staged.delete();
+  await File.downloadFileAsync(url, staged);
+
+  try {
+    const source = await ImageManipulator.manipulate(staged.uri).renderAsync();
+    const { width, height } = source;
+    const longEdge = Math.max(width, height);
+    const decodedMb = ((width * height * 4) / 1024 / 1024).toFixed(1);
+
+    // Already small enough — don't re-encode and lose quality for nothing. Covers square images too,
+    // where either edge is the long one.
+    if (longEdge <= WIDGET_RENDER_MAX_DIMENSION) {
+      await staged.move(target);
+      lastImageDebug = `${width}x${height} ${decodedMb}MB kept`;
+      return target.uri;
+    }
+
+    // Constrain whichever edge is longer; expo-image-manipulator derives the other from the ratio.
+    const context = ImageManipulator.manipulate(staged.uri);
+    const scaled =
+      width >= height
+        ? context.resize({ width: WIDGET_RENDER_MAX_DIMENSION })
+        : context.resize({ height: WIDGET_RENDER_MAX_DIMENSION });
+
+    const rendered = await scaled.renderAsync();
+    const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+    await new File(saved.uri).move(target);
+
+    const outMb = ((rendered.width * rendered.height * 4) / 1024 / 1024).toFixed(1);
+    lastImageDebug = `${width}x${height} ${decodedMb}MB -> ${rendered.width}x${rendered.height} ${outMb}MB`;
+    return target.uri;
+  } finally {
+    if (staged.exists) staged.delete();
+  }
 }
 
 interface StackContext {
@@ -101,7 +151,10 @@ export async function syncWidgetOnOpen(coupleId: string, userId: string): Promis
       music,
       partnerName: partner?.name ?? 'Your partner',
     });
-    DoryWidget.updateSnapshot(props);
+    // `_imageDebug` is not read by the widget component — it rides along so the downscale result is
+    // visible in the App Group plist, which is the only channel readable from a host machine
+    // (Metro logs don't stream here, and devicectl can't reach the ExpoWidgets directory).
+    DoryWidget.updateSnapshot({ ...props, _imageDebug: lastImageDebug } as DoryWidgetProps);
   } catch {
     /* leave the widget on its last good snapshot */
   }
