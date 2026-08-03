@@ -1,5 +1,47 @@
 # Investigation: the home-screen widget is frozen on one snapshot
 
+> ## ROOT CAUSE NARROWED 2026-08-03 15:30 — it is PER-FILE, not per-branch
+>
+> The photo branch **works**. Proven on device: pointing Alex's latest photo at storage object
+> `10a39452` and parking the cursor there rendered the image on the home screen. So
+> `aspectRatio` + `clipped`, App Group image loading, and the whole photo render path are fine —
+> the modifier theory in the box below is **dead**.
+>
+> What actually predicts success is *which file*:
+>
+> | Storage object | Bytes | cacheControl | Renders? |
+> |---|---|---|---|
+> | `10a39452` (app logo) | 82 KB | `no-cache` | **yes** |
+> | `fb31616a` (photo) | 49 KB | `max-age=3600` | no |
+> | `4f6148a4` (drawing) | 69 KB | `max-age=3600` | no |
+> | `3c3cc075` (photo) | 585 KB | `max-age=3600` | no |
+>
+> **File size is explicitly not the predictor** — 82 KB renders while 49 KB does not. `10a39452` is
+> also the only object in the bucket with `no-cache`, and the only one not uploaded through the app.
+>
+> **Leading hypothesis: decoded pixel dimensions.** Everything uploaded through the app is resized to
+> `WIDGET_IMAGE_MAX_DIMENSION = 1200` on the long edge (`src/domain/media/repository.ts:57`), i.e.
+> ~1200×1600 → **~7.7 MB decoded**. The app logo is small and square (~1 MB decoded). 7.7 MB sounds
+> safe against the 30 MB extension ceiling, but expo-widgets runs a **whole JS runtime inside the
+> widget extension**, sharing that budget. A render that exceeds it fails silently — no crash log —
+> and WidgetKit keeps the previous snapshot, which is exactly the observed behaviour.
+>
+> Note `repository.ts:38-42` already says the 1200 cap exists *because* of the 30 MB ceiling. The
+> intent was right; the number is likely just too generous.
+>
+> **Proposed fix (also the test):** downscale the copy written into the App Group inside
+> `downloadToAppGroup` (`src/lib/widget-sync.ts`), rather than only lowering
+> `WIDGET_IMAGE_MAX_DIMENSION` — lowering the constant only affects *future* uploads and leaves every
+> stored object broken. A medium widget is ~338×158 pt (~1014×474 px @3x), so a 600 px long edge is
+> ample and decodes to under 2 MB. If the photo then renders, the hypothesis is confirmed.
+>
+> Caution when implementing: read the installed `expo-file-system` `.d.ts` for the `File` copy/move
+> surface first. I burned time guessing at it — CLAUDE.md warns about exactly this.
+>
+> **Also ruled out this round:** refresh budget / latency. With props parked on `photo` and the app
+> left closed, four captures over 2+ minutes never rendered it, while a *music* snapshot written 40
+> seconds earlier had rendered fine. Delivery is not the issue; a specific render fails.
+
 > ## ⚠️ UPDATE 2026-08-03 14:50 — THE FREEZE NO LONGER REPRODUCES
 >
 > A screenshot harness now exists (`tools/widget-shot/`, see §11) that photographs the phone's home
