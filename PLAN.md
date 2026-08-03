@@ -34,7 +34,10 @@ affected — widgets/Live Activities stability carries forward from 56.
 2. Widgets can't host a drawing canvas — tap deep-links into the app (already in spec).
 3. Spotify is hard-capped at **5 users forever** (owner needs Premium; extended quota needs a
    250k-MAU business). Deprioritized to M6.
-4. Widget extensions die at **30MB** — the widget only ever touches a ≤1200px derivative.
+4. Widget extensions die at **30MB** — but the real headroom is far lower, because the extension
+   shares that budget with the expo-widgets JS runtime. Measured on device: 4.0MB decoded rendered,
+   5.5MB did not, and over-budget renders fail *silently* (last snapshot persists, no crash log). The
+   widget only ever touches a **≤600px** derivative, capped when writing into the App Group.
 
 ### Costs
 
