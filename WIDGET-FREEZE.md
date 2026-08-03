@@ -1,5 +1,37 @@
 # Investigation: the home-screen widget is frozen on one snapshot
 
+> # ✅ RESOLVED 2026-08-03 — decoded bitmap size. Fixed in `c186227`.
+>
+> **Cause.** The widget extension shares its ~30MB budget with the expo-widgets **JS runtime**, so
+> usable headroom is far below 30MB. An over-budget render fails **silently** — no crash, no jetsam
+> entry, no red box — and WidgetKit keeps displaying the last good snapshot. That presents exactly as
+> "the widget is frozen", which is what sent this investigation down several wrong paths.
+>
+> **Measured threshold** (decoded = width × height × 4):
+>
+> | Object | Decoded before | Rendered before | After downscale | Renders now |
+> |---|---|---|---|---|
+> | `10a39452` | 1024×1024 → **4.0MB** | ✅ | 600×600, 1.4MB | ✅ |
+> | `fb31616a` | 1200×1200 → 5.5MB | ❌ | 600×600, 1.4MB | ✅ |
+> | `4f6148a4` | 1200×1738 → 8.0MB | ❌ | 415×600, 0.9MB | ✅ |
+> | `3c3cc075` | 1200×2422 → **11.1MB** | ❌ | 298×600, 0.7MB | ✅ |
+>
+> The cutoff is between 4.0MB and 5.5MB. The app logo rendered all along purely because it was the
+> smallest decoded image in the bucket — that coincidence is what made this look like a
+> music-versus-photo problem for hours.
+>
+> **Fix.** Cap the long edge at `WIDGET_RENDER_MAX_DIMENSION = 600` when writing into the App Group
+> (`downloadToAppGroup`), not only at upload — so media already in Storage is repaired.
+> `WIDGET_IMAGE_MAX_DIMENSION` lowered 1200 → 600 to match. Handles portrait, landscape and square,
+> and skips re-encoding anything already under the cap.
+>
+> **Verified on device**, each by a home-screen screenshot showing the correct image, via
+> `tools/widget-shot/`. File size is *not* a usable proxy — an 82KB object rendered while a 49KB one
+> did not; only pixel dimensions matter.
+>
+> Everything below is the investigation history, including several theories that were raised and
+> falsified. Kept deliberately: the dead ends are the expensive part to rediscover.
+
 > ## ROOT CAUSE NARROWED 2026-08-03 15:30 — it is PER-FILE, not per-branch
 >
 > The photo branch **works**. Proven on device: pointing Alex's latest photo at storage object
