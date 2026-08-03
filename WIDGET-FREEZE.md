@@ -15,11 +15,42 @@
 > refreshed data instead of the null rows that the pg_cron poller kept restoring. Music is therefore
 > always present in the stack.
 >
-> **Still unconfirmed:** no capture has yet caught the widget rendering a **photo** or **drawing** —
-> every observation landed on the music card. Props were seen rotating correctly (`photo`, then
-> `music`), so the widget appears to lag props by about one cycle, and the captures may simply have
-> missed the image frames. Confirming a photo/drawing render is the remaining work. Everything below
-> this box predates the harness — read it as history, not current state.
+> ## CONFIRMED 2026-08-03 15:10 — the widget renders music, and *only* music
+>
+> Six capture cycles across two phases, each with the delivered props recorded alongside the render:
+>
+> | Cycle | Props delivered | Rendered on screen |
+> |---|---|---|
+> | A1 | `drawing` | music — a thousand years |
+> | A2 | `music` | music — All I Want |
+> | A3 | `photo` | music — All I Want |
+> | B1 | `drawing` | music — All I Want |
+> | B2 | `music` | music — Everybody Talks |
+> | B3 | `photo` | music — Everybody Talks |
+>
+> **Photo and drawing never reach the screen.** When their props are delivered, WidgetKit keeps
+> showing the last successful render, which is always the most recent music card. Music itself
+> repaints reliably — B2 rendered a brand-new track in the same cycle its props were written, giving
+> a **refresh latency under ~20–30s** from `updateSnapshot` to on-screen.
+>
+> **The two render paths differ only in their modifiers** (`widgets/dory-widget.tsx`):
+> - music album art — `resizable()`, `frame({width:56,height:56})`, `clipShape(...)` → **renders**
+> - photo/drawing — `resizable()`, `aspectRatio({contentMode:'fill'})`, `clipped(true)` → **never renders**
+>
+> Both `aspectRatio` and `clipped` *are* registered natively
+> (`@expo/ui/ios/Modifiers/ViewModifierRegistry.swift:1847,1851`), so they aren't simply missing —
+> but note our call passes only `{contentMode:'fill'}` with no ratio value, which is worth checking
+> against `AspectRatioModifier`'s expected params.
+>
+> **Image size is ruled out.** Every object in the `media` bucket is ≤0.56 MB and the ones in play are
+> 50–70 KB — nowhere near the 30MB extension ceiling. Combined with the jetsam evidence below, §7.1
+> is dead. And music's album art proves App Group image loading works in general.
+>
+> **Next experiment:** swap the photo/drawing branch to music's working modifier set
+> (`frame` + `clipShape` instead of `aspectRatio` + `clipped`), rebuild, and capture. If the photo
+> then renders, it's the modifiers; if not, it's something about the file itself. One build settles it.
+>
+> Everything below this box predates the harness — read it as history, not current state.
 
 **Status:** downgraded from "frozen" to "unconfirmed for image branches", 2026-08-03.
 
