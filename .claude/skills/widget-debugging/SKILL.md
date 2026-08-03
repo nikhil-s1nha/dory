@@ -106,17 +106,29 @@ pipeline on the simulator; verify rendering on a physical device (see `ios-devic
 Corollary: don't burn turns on coordinate-clicking the gallery open. That loop was explicitly called
 out as a rabbit hole — search for the platform bug first.
 
-## Known open issue — now narrowed to the repaint alone
+## Known open issue — the widget freezes on one snapshot
 
-The smart stack (photo → drawing → music, one step per app open) computes correctly *and delivers*.
-Verified on device by the plist method above across 11 cold launches: all three kinds reached
-WidgetKit with advancing timestamps, cycling in priority order. So `stack.ts`, the AsyncStorage cursor
-(`dory.widget.cursor`, starting at `-1`), the App Group write, and `updateSnapshot` are all sound —
-rule them out rather than re-investigating them.
+**Full write-up and next steps: [`WIDGET-FREEZE.md`](../../../WIDGET-FREEZE.md). Read it before
+investigating — it records what's already ruled out.**
 
-What remains unverified is only whether the *live* home-screen widget visibly repaints when new props
-land, since WidgetKit owns timing via its refresh budget and nothing on the CLI can observe the
-rendered widget. Candidate fixes if it proves not to: call `reload()` rather than only
+The smart stack computes correctly and reaches the **plist**: verified on device across 11 cold
+launches, all three kinds with advancing timestamps, cycling in priority order. So `stack.ts`, the
+AsyncStorage cursor (`dory.widget.cursor`, starting at `-1`), the App Group write, and
+`updateSnapshot` are sound. `updateSnapshot` also provably reaches
+`WidgetCenter.reloadTimelines(ofKind:)`, so "the app never notifies WidgetKit" is ruled out.
+
+But delivery to the plist is **not** delivery to the screen. As of 2026-08-03 the placed widget is
+stuck rendering one old snapshot, surviving prop updates, an extension restart, and a widget
+remove/re-add. Leading hypothesis: WidgetKit keeps the last *successfully rendered* view, and the
+image-rendering branches are failing — the frozen item is music, the only branch that renders no
+image. Second candidate: the ≤1200px derivative isn't actually enforced and a full-size JPEG blows the
+extension's 30MB ceiling (fits the absence of crash logs).
+
+Don't conclude the App Group image directory is missing from `devicectl` failing to list or copy
+`ExpoWidgets/` — `WidgetsModule.swift` creates that directory on every read of `widgetsDirectory`, so
+those failures are a limitation of the app-group domain view. Confirm from inside the app instead.
+
+Candidate fixes once delivery is proven: call `reload()` explicitly rather than relying on
 `updateSnapshot`, move to a real `updateTimeline`, and/or advance the cursor on app **background** so
 the next glance is already fresh (today it advances on foreground — i.e. while the user is looking at
 the app, not the widget).
