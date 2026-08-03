@@ -74,9 +74,14 @@ async function buildProps(
  */
 export async function syncWidgetOnOpen(coupleId: string, userId: string): Promise<void> {
   try {
+    // The widget is a window into what *the partner* is doing (spec 3.1/3.2: a sent item "becomes
+    // the new top-priority item in the partner's widget stack"). `fetchRecentMedia` is couple-scoped,
+    // so it also returns our own sends — filter them out, or the widget shows you your own photo
+    // back and a partner who has gone quiet looks like a broken widget.
     const media = await fetchRecentMedia(supabase, coupleId, 20);
-    const latestPhoto = media.find((m) => m.type === 'photo') ?? null;
-    const latestDrawing = media.find((m) => m.type === 'drawing') ?? null;
+    const fromPartner = media.filter((m) => m.senderId !== userId);
+    const latestPhoto = fromPartner.find((m) => m.type === 'photo') ?? null;
+    const latestDrawing = fromPartner.find((m) => m.type === 'drawing') ?? null;
     const partner = await fetchPartnerNowPlaying(supabase, coupleId, userId);
     const music = partner?.nowPlaying ?? null;
 
