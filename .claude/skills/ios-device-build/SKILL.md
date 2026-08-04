@@ -59,11 +59,20 @@ If the state is bad, in this order of likelihood:
 
 ## 2. Don't re-ask for signing credentials
 
-Signing is already committed to the repo: `DEVELOPMENT_TEAM = K4MBJGZLNY`, automatic style, on all
-four configurations in `ios/Bundles.xcodeproj/project.pbxproj`. Verify rather than ask:
+`DEVELOPMENT_TEAM = K4MBJGZLNY`, automatic style, belongs on all four configurations in
+`ios/Bundles.xcodeproj/project.pbxproj`. Verify rather than ask:
 
 ```sh
 grep -c "DEVELOPMENT_TEAM = K4MBJGZLNY" ios/Bundles.xcodeproj/project.pbxproj   # expect 4
+```
+
+**This is not committed to the repo, despite how permanent it looks.** `/ios` is gitignored and
+`expo prebuild` does not emit `DEVELOPMENT_TEAM` at all, so every prebuild silently drops it and the
+next device build dies on signing. If the count above is 0 after a prebuild, put it back:
+
+```sh
+perl -pi -e 's/^(\t*)(PRODUCT_BUNDLE_IDENTIFIER = .*;)$/$1$2\n$1DEVELOPMENT_TEAM = K4MBJGZLNY;/' \
+  ios/Bundles.xcodeproj/project.pbxproj
 ```
 
 **Apple ID vs Team ID** — these get conflated, and the confusion sends people to the wrong fix:
@@ -77,10 +86,37 @@ So: a build failing to *authenticate* or *create profiles* means the Apple ID is
 Accounts. It does **not** mean the Team ID is wrong. Don't go hunting for a Team ID to fix an
 auth error.
 
-App IDs, App Groups, and the widget identifier all auto-register through automatic signing on first
-device build — none of them are created by hand in the developer portal. The one hard rule is that
-the extension's bundle id must be prefixed by the app's (`com.nikhilsinha.bundles` →
+The extension's bundle id must be prefixed by the app's (`com.nikhilsinha.bundles` →
 `com.nikhilsinha.bundles.widgets`), which it already is.
+
+**Automatic signing from the command line does NOT register App Groups.** This was previously
+recorded here as auto-handled; it isn't, and the rename to Bundles proved it over two failed builds.
+`xcodebuild`/`expo run:ios` will not create an App Group identifier, and when the group is missing it
+silently falls back to the wildcard `iOS Team Provisioning Profile: *`, which supports neither App
+Groups nor Push. The failure reads as seven signing errors:
+
+```
+Provisioning Profile "iOS Team Provisioning Profile: *" does not support the App Groups capability.
+Provisioning profile "…" doesn't include the aps-environment and com.apple.security.application-groups entitlements.
+```
+
+Retrying the build does not help. Fix it once, per bundle id:
+
+1. Create the group in the portal — [Identifiers → App Groups](https://developer.apple.com/account/resources/identifiers/list/applicationGroup)
+   → ＋ → App Groups → identifier `group.com.nikhilsinha.bundles`. Only the *portal* can create this.
+2. Open `ios/Bundles.xcworkspace` in the **Xcode GUI** and visit Signing & Capabilities for **both**
+   the `Bundles` and `ExpoWidgetsTarget` targets. The GUI registers the App IDs and attaches App
+   Groups (plus Push on the app target); the command line will not do this for you.
+
+Confirm real profiles exist before rebuilding — this takes seconds and saves a full arm64 compile:
+
+```sh
+find ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles -name "*.mobileprovision" -mmin -120 \
+  | while read -r f; do security cms -D -i "$f" | grep -q "group.com.nikhilsinha.bundles" && echo "$f"; done
+```
+
+Expect two: `com.nikhilsinha.bundles` (with `aps-environment`) and `com.nikhilsinha.bundles.widgets`
+(without — push is app-target only, by design).
 
 ## 3. If the phone has never been built to before, register it explicitly
 
