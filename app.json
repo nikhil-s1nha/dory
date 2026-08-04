@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Bundles",
+    "slug": "bundles",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "bundles",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.nikhilsinha.bundles",
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#208AEF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Bundles uses the camera so you can send your partner a photo."
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.nikhilsinha.bundles.widgets",
+          "groupIdentifier": "group.com.nikhilsinha.bundles",
+          "enablePushNotifications": true,
+          "src": "./widgets",
+          "widgets": [
+            {
+              "name": "BundlesWidget",
+              "displayName": "Bundles",
+              "description": "A little window into what your partner is up to.",
+              "supportedFamilies": ["systemSmall", "systemMedium", "systemLarge"]
+            }
+          ]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

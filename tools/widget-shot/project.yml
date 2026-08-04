@@ -1,0 +1,45 @@
+# Minimal Xcode project whose only job is to photograph the iPhone's home screen, so the Bundles
+# widget can be verified without a human looking at the phone.
+#
+# Generated with `xcodegen` rather than hand-edited pbxproj. Regenerate with:
+#   cd tools/widget-shot && xcodegen generate
+#
+# Lives outside ios/ on purpose: `npx expo prebuild` regenerates that directory and would delete a
+# test target added to the app project.
+name: WidgetShot
+
+options:
+  bundleIdPrefix: com.nikhilsinha
+  deploymentTarget:
+    iOS: "16.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # Same team as the app, so automatic signing reuses credentials already on this machine.
+    DEVELOPMENT_TEAM: K4MBJGZLNY
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+
+targets:
+  WidgetShotUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nikhilsinha.widgetshot.uitests
+        # No TEST_TARGET_NAME: this bundle drives Springboard and Bundles by bundle id rather than
+        # hosting an app of its own, so it doesn't need to be attached to the Bundles target at all.
+        GENERATE_INFOPLIST_FILE: "YES"
+
+schemes:
+  WidgetShotUITests:
+    build:
+      targets:
+        WidgetShotUITests: [test]
+    test:
+      targets:
+        - WidgetShotUITests

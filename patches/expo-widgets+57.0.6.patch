@@ -1,0 +1,31 @@
+diff --git a/node_modules/expo-widgets/ios/Widgets/EntryView.swift b/node_modules/expo-widgets/ios/Widgets/EntryView.swift
+index 946b66d..dd87c92 100644
+--- a/node_modules/expo-widgets/ios/Widgets/EntryView.swift
++++ b/node_modules/expo-widgets/ios/Widgets/EntryView.swift
+@@ -24,7 +24,8 @@ public struct WidgetsEntryView: View {
+     return jsonString
+   }
+ 
+-  public var body: some View {
++  @ViewBuilder
++  private var content: some View {
+     if let layout = WidgetsStorage.getString(forKey: "__expo_widgets_\(entry.name)_layout"),
+        !layout.isEmpty {
+       let node = evaluateLayout(layout: layout, props: entry.props ?? [:], environment: widgetEnvironment)
+@@ -33,4 +34,16 @@ public struct WidgetsEntryView: View {
+       WidgetsDynamicView(name: entry.name, kind: .widget, node: createRedBox(message: "No layout found for \(WidgetsStorage.appGroupIdentifier ?? "")::\(entry.name)"), entryIndex: entry.entryIndex, environmentString: widgetEnvironmentString)
+     }
+   }
++
++  // iOS 17+ requires every widget's top-level view to declare a container background, or WidgetKit
++  // refuses to render ("Please adopt containerBackground API"). expo-widgets doesn't apply one
++  // (expo/expo#46200), and a JS-level modifier on the inner node isn't seen at the top level — so we
++  // apply it here on the actual entry view. Black matches the widget's design (images fill it).
++  public var body: some View {
++    if #available(iOSApplicationExtension 17.0, *) {
++      content.containerBackground(for: .widget) { Color.black }
++    } else {
++      content
++    }
++  }
+ }
