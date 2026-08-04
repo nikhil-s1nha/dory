@@ -1,6 +1,6 @@
 import XCTest
 
-/// Photographs the iPhone's home screen so the Dory widget can be verified without a human
+/// Photographs the iPhone's home screen so the Bundles widget can be verified without a human
 /// looking at the phone.
 ///
 /// Why this exists: `devicectl` has no screenshot command, and libimobiledevice's
@@ -22,12 +22,12 @@ final class WidgetShotUITests: XCTestCase {
     captureAllHomePages(prefix: "home")
   }
 
-  /// Open Dory (which triggers `useWidgetSync` -> `advanceStack` -> `updateSnapshot`), return to the
+  /// Open Bundles (which triggers `useWidgetSync` -> `advanceStack` -> `updateSnapshot`), return to the
   /// home screen, and capture. This is the "does one app open change the widget" test — run it
   /// repeatedly to watch the smart stack advance.
-  func testOpenDoryThenCaptureHomeScreen() throws {
-    let dory = XCUIApplication(bundleIdentifier: "com.nikhilsinha.dory")
-    dory.launch()
+  func testOpenBundlesThenCaptureHomeScreen() throws {
+    let bundles = XCUIApplication(bundleIdentifier: "com.nikhilsinha.bundles")
+    bundles.launch()
 
     // The sync does a network fetch, a signed-URL round trip, and an image download before it calls
     // updateSnapshot. Cutting this short kills the sync mid-flight.
@@ -39,7 +39,7 @@ final class WidgetShotUITests: XCTestCase {
 
   /// Capture every home-screen page.
   ///
-  /// Locating the Dory widget programmatically is unreliable — a widget's accessibility tree is
+  /// Locating the Bundles widget programmatically is unreliable — a widget's accessibility tree is
   /// opaque and its label depends on whatever content it happens to be rendering. And picking a
   /// single page is worse: `springboard.activate()` returns to the last-shown page (which is luck),
   /// while pressing home jumps to page one (where the widget may not live). Either way you can

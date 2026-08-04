@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Pick, from one capture run, the page image showing the Dory widget.
+"""Pick, from one capture run, the page image showing the Bundles widget.
 
 `shoot.sh` photographs every home-screen page in swipe order, and the exported filenames are UUIDs —
 the page each one came from is only recorded in the run's `manifest.json` (as `…-pageN`). On this
-phone the Dory widget lives on the **second** home screen, so page 2 is the default.
+phone the Bundles widget lives on the **second** home screen, so page 2 is the default.
 
 Usage: pick_widget_page.py RUN_DIR [PAGE]     # prints the chosen png path
 """

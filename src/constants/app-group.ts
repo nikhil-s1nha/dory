@@ -9,10 +9,10 @@
  */
 
 /** Must equal `expo.ios.bundleIdentifier` in app.json. */
-export const IOS_BUNDLE_IDENTIFIER = 'com.nikhilsinha.dory';
+export const IOS_BUNDLE_IDENTIFIER = 'com.nikhilsinha.bundles';
 
 /** Must equal `expo.scheme` in app.json. Widget taps deep-link through this. */
-export const URL_SCHEME = 'dory';
+export const URL_SCHEME = 'bundles';
 
 /** The shared container both the app and the widget extension can read/write. */
 export const APP_GROUP_IDENTIFIER = `group.${IOS_BUNDLE_IDENTIFIER}`;

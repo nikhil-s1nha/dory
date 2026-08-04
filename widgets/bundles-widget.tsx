@@ -22,7 +22,7 @@ import { createWidget, type WidgetEnvironment } from 'expo-widgets';
  * — without it the widget refuses to render and shows "Please adopt containerBackground API". We use
  * a consistent black background (photos/drawings fill it; text is light for contrast).
  */
-export type DoryWidgetProps = {
+export type BundlesWidgetProps = {
   kind: 'photo' | 'drawing' | 'music' | 'empty';
   /** App Group file path for the photo/drawing/album art. */
   imageFile?: string;
@@ -32,11 +32,11 @@ export type DoryWidgetProps = {
   subtitle?: string;
   /** e.g. "Alex sent a photo" or "Alex is listening to …". */
   caption?: string;
-  /** Deep link opened on tap, e.g. dory://media/<id>. */
+  /** Deep link opened on tap, e.g. bundles://media/<id>. */
   deepLink?: string;
 };
 
-const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => {
+const BundlesWidget = (props: BundlesWidgetProps, _environment: WidgetEnvironment) => {
   'widget';
 
   // Defined INSIDE the component: the 'widget' directive serializes only the function body into the
@@ -91,7 +91,7 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
   return (
     <VStack modifiers={[padding({ all: 16 }), containerBackground(BG, 'widget')]}>
       <Spacer />
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>Dory</Text>
+      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>Bundles</Text>
       <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED)]}>
         Open to see what your partner is up to.
       </Text>
@@ -100,4 +100,4 @@ const DoryWidget = (props: DoryWidgetProps, _environment: WidgetEnvironment) => 
   );
 };
 
-export default createWidget('DoryWidget', DoryWidget);
+export default createWidget('BundlesWidget', BundlesWidget);

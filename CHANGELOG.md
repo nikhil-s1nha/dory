@@ -26,21 +26,21 @@ now-playing UI are blocked on Spotify credentials (below).
 ### Built — full OAuth + poller + UI (2026-07-23)
 - **Edge Functions** (`supabase/functions/`, deployed): `spotify-start` (authenticated — mints a
   state tied to the caller, returns the authorize URL), `spotify-callback` (public — exchanges the
-  code with the client secret, stores tokens, bounces back to the app via `dory://`), `spotify-poll`
+  code with the client secret, stores tokens, bounces back to the app via `bundles://`), `spotify-poll`
   (secret-gated — refreshes tokens as needed, reads currently-playing, upserts `now_playing`).
   Client id/secret + a poller secret live as Supabase function secrets; never in the repo.
 - **Cron** (`0006` state table, `0007` schedule): `pg_cron` calls `spotify-poll` every 2 min via
   `pg_net`, with the shared secret read from **Vault** (not committed).
 - **Connect architecture**: server-side token exchange (secret never touches the app). Redirect URI
   is the **HTTPS callback function** (`…/functions/v1/spotify-callback`) — Spotify tightened custom-
-  scheme rules in 2025, so HTTPS is used; the `dory://` scheme only bounces the browser back.
+  scheme rules in 2025, so HTTPS is used; the `bundles://` scheme only bounces the browser back.
 - **App** — `src/domain/spotify/repository.ts` (start connect, connection status, disconnect, read
   partner's now-playing) and `src/app/music.tsx`: "Connect Spotify" flow via `openAuthSessionAsync`,
   and the partner's now-playing card ("{name} is listening to {song}"), live via Realtime.
 
 ### Verified
 - Functions deployed and smoke-tested live: `spotify-poll` returns `{polled:0}` with the secret and
-  **403 without it**; `spotify-callback` bounces to `dory://…?error=missing_code`; `spotify-start`
+  **403 without it**; `spotify-callback` bounces to `bundles://…?error=missing_code`; `spotify-start`
   (with a real user JWT) returns a valid authorize URL and creates the state row. Cron job scheduled
   and active.
 - Music screen **rendered on the simulator** against live data: empty now-playing state + "Connect
@@ -126,7 +126,7 @@ automation available here), but the stroke model is unit-tested and the canvas r
   and three stroke widths, Clear, and Send. Send snapshots the canvas (`makeImageSnapshot` →
   base64 PNG → data URI) and ships it as a `type: 'drawing'` item through the **same M3 media
   pipeline** (downscale/upload/record/deliver).
-- **Round-trip** — opening `dory:///draw?base=<mediaId>` loads that drawing as a Skia background
+- **Round-trip** — opening `bundles:///draw?base=<mediaId>` loads that drawing as a Skia background
   layer; new strokes composite on top; Send snapshots base + strokes into a new drawing sent back.
   This is the deep-link a drawing widget/notification will trigger (spec 3.2). Header reads
   "Draw back" in this mode.
@@ -140,7 +140,7 @@ automation available here), but the stroke model is unit-tested and the canvas r
 - `npm test` — 83/83 (+11 drawing); typecheck + lint clean.
 
 ### Phase B (shared with M3, pending Apple enrollment)
-- Drawing widget: static render of the latest drawing; tap → `dory:///draw?base=<id>` (round-trip).
+- Drawing widget: static render of the latest drawing; tap → `bundles:///draw?base=<id>` (round-trip).
 - Push dispatch to trigger the widget reload + the visible "…drew you something" notification.
 
 ## M3 — Photo → widget (Phase A)
@@ -162,7 +162,7 @@ has no camera, so live capture is only fully exercised on a device.
 - **Capture screen** — `src/app/photo.tsx`: camera opens immediately (permission-gated), shutter →
   review (retake/send) → `sendImage` → back. Low-friction per spec 3.1.
 - **Full-view screen** — `src/app/media/[id].tsx`: the widget's deep-link target
-  (`dory:///media/<id>`) and in-app viewer; resolves a signed URL, displays the image, marks seen.
+  (`bundles:///media/<id>`) and in-app viewer; resolves a signed URL, displays the image, marks seen.
 - Camera permission wired via the `expo-camera` config plugin in `app.json`.
 
 ### Verified (Phase A)
@@ -178,7 +178,7 @@ has no camera, so live capture is only fully exercised on a device.
 
 ### Phase B — pending Apple enrollment
 - App Group entitlement + container write (the widget-cache seam in `src/constants/app-group.ts`).
-- `expo-widgets` widget: render the latest photo, tap → `dory:///media/<id>`. (First real
+- `expo-widgets` widget: render the latest photo, tap → `bundles:///media/<id>`. (First real
   expo-widgets test; App-Group `state.json` keeps a Swift fallback cheap if needed.)
 - Push dispatch (Edge Function) to trigger the widget timeline reload on the recipient's device,
   plus the visible "…sent you a photo" notification (the reliable channel).
@@ -196,7 +196,7 @@ has no camera, so live capture is only fully exercised on a device.
   `upsertMany`, `setChecked`, `removeItem`, `sortItems` — newest first, id tie-break) that
   reconciles optimistic edits, fetches, and Realtime echoes by id; plus a repository (fetch / add
   with client-generated id / check / delete / `subscribeToItems`).
-- **Home screen** — `src/app/(tabs)/index.tsx`: "Dory" title over a 2x2 button grid whose uniform
+- **Home screen** — `src/app/(tabs)/index.tsx`: "Bundles" title over a 2x2 button grid whose uniform
   gaps form the spec's visible plus/cross channel. Photo, Drawing, Music tiles navigate to their
   flows; the fourth ("Soon") is a visible, disabled placeholder. `HomeButton` component.
 - **Instagram-style tab bar** — `src/app/(tabs)/_layout.tsx` on expo-router's headless `Tabs`
@@ -224,11 +224,11 @@ has no camera, so live capture is only fully exercised on a device.
 ### Decisions
 - Architecture: Expo + `expo-widgets`, backend Supabase. Rationale in `PLAN.md`.
 - Pinned to **Expo SDK 57** (spec said 56; 57 is a non-breaking superset and current `latest`).
-- App identity: name `Dory`, slug `dory`, bundle id `com.nikhilsinha.dory`, scheme `dory`.
+- App identity: name `Bundles`, slug `bundles`, bundle id `com.nikhilsinha.bundles`, scheme `bundles`.
 
 ### Built
 - Expo SDK 57 app scaffolded via `create-expo-app` (default template: expo-router, TypeScript
-  strict, `src/` layout). Project renamed from `scaffold` to `dory`.
+  strict, `src/` layout). Project renamed from `scaffold` to `bundles`.
 - App Group seam defined in `src/constants/app-group.ts` — the single app↔widget contract, with
   the container identifier, state filename/version, and the 30MB-driven image dimension cap.
 - Test harness: `jest-expo` + `@testing-library/react-native`. `react-test-renderer` pinned to

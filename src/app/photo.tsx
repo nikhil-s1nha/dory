@@ -35,7 +35,7 @@ export default function PhotoScreen() {
       <SafeAreaView style={styles.centered}>
         <ThemedText type="subtitle">Camera access needed</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.permText}>
-          Dory opens the camera so you can send your partner a photo.
+          Bundles opens the camera so you can send your partner a photo.
         </ThemedText>
         <Pressable style={[styles.pill, { backgroundColor: colors.text }]} onPress={requestPermission}>
           <ThemedText type="smallBold" style={{ color: colors.background }}>

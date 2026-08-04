@@ -13,7 +13,7 @@ import { widgetsDirectory } from 'expo-widgets';
 
 import { WIDGET_RENDER_MAX_DIMENSION } from '@/constants/app-group';
 
-import DoryWidget, { type DoryWidgetProps } from '../../widgets/dory-widget';
+import BundlesWidget, { type BundlesWidgetProps } from '../../widgets/bundles-widget';
 import { fetchPartnerNowPlaying } from '@/domain/spotify/repository';
 import { fetchRecentMedia, getSignedUrl } from '@/domain/media/repository';
 import type { MediaItem } from '@/domain/media/types';
@@ -21,7 +21,7 @@ import type { NowPlaying } from '@/domain/spotify/types';
 import { advanceStack, INITIAL_CURSOR, type WidgetContentType } from '@/domain/widget/stack';
 import { supabase } from '@/lib/supabase';
 
-const CURSOR_KEY = 'dory.widget.cursor';
+const CURSOR_KEY = 'bundles.widget.cursor';
 
 /** What the last downscale produced, surfaced through the widget props for on-device diagnosis. */
 let lastImageDebug: string | undefined;
@@ -90,17 +90,17 @@ interface StackContext {
 async function buildProps(
   item: WidgetContentType | null,
   ctx: StackContext,
-): Promise<DoryWidgetProps> {
+): Promise<BundlesWidgetProps> {
   if (item === 'photo' && ctx.latestPhoto) {
     const url = await getSignedUrl(supabase, ctx.latestPhoto.storagePath);
     const file = await downloadToAppGroup(url, `photo-${ctx.latestPhoto.id}.jpg`);
-    return { kind: 'photo', imageFile: file, deepLink: `dory://media/${ctx.latestPhoto.id}` };
+    return { kind: 'photo', imageFile: file, deepLink: `bundles://media/${ctx.latestPhoto.id}` };
   }
   if (item === 'drawing' && ctx.latestDrawing) {
     const url = await getSignedUrl(supabase, ctx.latestDrawing.storagePath);
     const file = await downloadToAppGroup(url, `drawing-${ctx.latestDrawing.id}.jpg`);
     // Tapping a drawing opens the canvas pre-loaded, ready to draw back (spec 3.2).
-    return { kind: 'drawing', imageFile: file, deepLink: `dory://draw?base=${ctx.latestDrawing.id}` };
+    return { kind: 'drawing', imageFile: file, deepLink: `bundles://draw?base=${ctx.latestDrawing.id}` };
   }
   if (item === 'music' && ctx.music) {
     const imageFile = ctx.music.albumArtUrl
@@ -112,7 +112,7 @@ async function buildProps(
       title: ctx.music.title,
       subtitle: ctx.music.artist,
       caption: `${ctx.partnerName} is listening to ${ctx.music.title}`,
-      deepLink: 'dory://music',
+      deepLink: 'bundles://music',
     };
   }
   return { kind: 'empty' };
@@ -154,7 +154,7 @@ export async function syncWidgetOnOpen(coupleId: string, userId: string): Promis
     // `_imageDebug` is not read by the widget component — it rides along so the downscale result is
     // visible in the App Group plist, which is the only channel readable from a host machine
     // (Metro logs don't stream here, and devicectl can't reach the ExpoWidgets directory).
-    DoryWidget.updateSnapshot({ ...props, _imageDebug: lastImageDebug } as DoryWidgetProps);
+    BundlesWidget.updateSnapshot({ ...props, _imageDebug: lastImageDebug } as BundlesWidgetProps);
   } catch {
     /* leave the widget on its last good snapshot */
   }

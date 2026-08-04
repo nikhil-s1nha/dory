@@ -107,7 +107,7 @@
 > repaints reliably — B2 rendered a brand-new track in the same cycle its props were written, giving
 > a **refresh latency under ~20–30s** from `updateSnapshot` to on-screen.
 >
-> **The two render paths differ only in their modifiers** (`widgets/dory-widget.tsx`):
+> **The two render paths differ only in their modifiers** (`widgets/bundles-widget.tsx`):
 > - music album art — `resizable()`, `frame({width:56,height:56})`, `clipShape(...)` → **renders**
 > - photo/drawing — `resizable()`, `aspectRatio({contentMode:'fill'})`, `clipped(true)` → **never renders**
 >
@@ -137,12 +137,12 @@ updates, an extension process restart, and a widget remove/re-add.
 ## 1. What the user sees
 
 The widget shows the music card — **"Mr. Blue Sky" / "Electric Light Orchestra"** — and never
-changes. Opening Dory repeatedly does nothing. Removing the widget and adding it back does nothing.
+changes. Opening Bundles repeatedly does nothing. Removing the widget and adding it back does nothing.
 
 That music card corresponds to exactly one snapshot ever written, at timestamp `1785725976043`. Every
 snapshot written since has been `photo` or `drawing`, and none of them has appeared on screen.
 
-Note the significance of *which* item it froze on: **music is the only branch of `DoryWidget` that
+Note the significance of *which* item it froze on: **music is the only branch of `BundlesWidget` that
 renders no image.** Photo and drawing both render `<Image uiImage={props.imageFile}>` from a
 `file://` path in the App Group. That asymmetry is the strongest clue available.
 
@@ -155,13 +155,13 @@ renders no image.** Photo and drawing both render `<Image uiImage={props.imageFi
 | Device | iPhone 17, iOS 26.5.2 |
 | Hardware UDID (for `expo run:ios`) | `00008150-001065A41445401C` |
 | devicectl identifier (for `devicectl`) | `32482374-396E-5305-8C73-6AB7A47827B5` |
-| App bundle id | `com.nikhilsinha.dory` |
-| App Group | `group.com.nikhilsinha.dory` |
+| App bundle id | `com.nikhilsinha.bundles` |
+| App Group | `group.com.nikhilsinha.bundles` |
 | App Group container UUID on device | `86A0078D-EDBE-4EF6-A66A-254814C2097F` |
 | Installed build | Release, from commit `a0aee19` |
 | Bundle container | `7C6E7159-702E-40DF-AA26-E403BDF5EF30` |
-| Signed in on phone as | `sam@dory.app` (user `7660b01e-…`) |
-| Partner | `alex@dory.app` (user `06a28969-…`), couple `99ca5d54-…` |
+| Signed in on phone as | `sam@bundles.app` (user `7660b01e-…`) |
+| Partner | `alex@bundles.app` (user `06a28969-…`), couple `99ca5d54-…` |
 
 There is a stale **iPhone 12** in `devicectl list devices` permanently marked `unavailable`. Ignore
 it; the iPhone 17 is the real device.
@@ -181,9 +181,9 @@ cold launches plus several manual opens.
 ```sh
 DEV=32482374-396E-5305-8C73-6AB7A47827B5
 xcrun devicectl device copy from --device $DEV \
-  --domain-type appGroupDataContainer --domain-identifier group.com.nikhilsinha.dory \
-  --source Library/Preferences/group.com.nikhilsinha.dory.plist --destination /tmp/w.plist
-plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_DoryWidget_timeline[0]'
+  --domain-type appGroupDataContainer --domain-identifier group.com.nikhilsinha.bundles \
+  --source Library/Preferences/group.com.nikhilsinha.bundles.plist --destination /tmp/w.plist
+plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_BundlesWidget_timeline[0]'
 ```
 
 This is the single most useful tool in this investigation: it shows the exact props WidgetKit was
@@ -197,24 +197,24 @@ plist. An unchanged timestamp means the sync did not run. This bit me once alrea
 
 Across 11 launches all three kinds reached the plist — `music`, `photo`, `drawing` — cycling in
 priority order with advancing timestamps. So `src/domain/widget/stack.ts`, the AsyncStorage cursor
-(`dory.widget.cursor`), and the App Group write are all sound.
+(`bundles.widget.cursor`), and the App Group write are all sound.
 
 ### 3.3 WidgetKit *is* being told to reload
 
 Traced through the library:
 
 ```
-JS  DoryWidget.updateSnapshot(props)
+JS  BundlesWidget.updateSnapshot(props)
  └─ node_modules/expo-widgets/src/Widgets.ts:56
       this.nativeWidgetObject.updateTimeline([{ timestamp: Date.now(), props }])
  └─ node_modules/expo-widgets/ios/WidgetObject.swift:15  updateTimeline(entries:)
-      writes __expo_widgets_DoryWidget_timeline, then calls self.reload()
+      writes __expo_widgets_BundlesWidget_timeline, then calls self.reload()
  └─ WidgetObject.swift:12  WidgetCenter.shared.reloadTimelines(ofKind: name)
 ```
 
 So "the app never notifies WidgetKit" is **ruled out**.
 
-One thing *not* yet checked: whether `name` (`"DoryWidget"`) actually matches the `kind:` string the
+One thing *not* yet checked: whether `name` (`"BundlesWidget"`) actually matches the `kind:` string the
 generated widget extension registers with WidgetKit. If those differ, `reloadTimelines(ofKind:)` is a
 silent no-op. **This is worth 10 minutes** — see §7.2.
 
@@ -224,7 +224,7 @@ Extension PID moved `2993` → `3061` across the remove/re-add, so it is not a f
 there are no crash logs:
 
 ```sh
-xcrun devicectl device info files --device $DEV --domain-type systemCrashLogs | grep -iE "widget|expo|Dory"
+xcrun devicectl device info files --device $DEV --domain-type systemCrashLogs | grep -iE "widget|expo|Bundles"
 ```
 
 returned nothing.
@@ -305,7 +305,7 @@ and in `syncWidgetOnOpen`, replace the bare catch so failures become visible in 
 ```ts
 } catch (e) {
   // TEMP DIAGNOSTIC: surface the swallowed error through the only readable channel.
-  DoryWidget.updateSnapshot({
+  BundlesWidget.updateSnapshot({
     kind: 'music',                      // text-only branch: renders without an image
     title: 'ERR',
     subtitle: String(e).slice(0, 120),
@@ -330,7 +330,7 @@ Verify the install actually landed (bundle container UUID must change — see
 `.claude/skills/ios-device-build/` §5), then drive launches and read the plist:
 
 ```sh
-xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.dory
+xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.bundles
 # wait ~8-10s for fetch + signed URL + download
 # then pull and inspect the plist as in §3.1
 ```
@@ -362,7 +362,7 @@ size. This is my second-favourite hypothesis after §5 and it fits the no-crash-
 
 ### 7.2 `reloadTimelines(ofKind:)` kind mismatch
 Confirm the string in `WidgetCenter.shared.reloadTimelines(ofKind: name)` — where `name` is
-`"DoryWidget"` — matches the `kind:` the generated extension registers. Look in the generated
+`"BundlesWidget"` — matches the `kind:` the generated extension registers. Look in the generated
 extension source under `ios/ExpoWidgetsTarget/` and in the `expo-widgets` config in `app.json`. A
 mismatch makes every reload a silent no-op. Cheap to check, and it would explain the freeze without
 any image involvement — though it would *not* explain the re-add doing nothing.
@@ -384,7 +384,7 @@ advance the cursor on app **background** instead of foreground, so the next glan
 
 ```sh
 DEV=32482374-396E-5305-8C73-6AB7A47827B5
-GROUP=group.com.nikhilsinha.dory
+GROUP=group.com.nikhilsinha.bundles
 
 # Is the device actually reachable? (needs the phone UNLOCKED — a locked phone can't mount the DDI)
 xcrun devicectl device info details --device $DEV | grep -iE "tunnelState|ddiServicesAvailable"
@@ -394,13 +394,13 @@ xcrun devicectl device info ddiServices --device $DEV     # definitive "device i
 xcrun devicectl device copy from --device $DEV \
   --domain-type appGroupDataContainer --domain-identifier $GROUP \
   --source Library/Preferences/$GROUP.plist --destination /tmp/w.plist
-plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_DoryWidget_timeline[0]'
+plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_BundlesWidget_timeline[0]'
 
 # Drive a cold open (fires useWidgetSync -> advanceStack -> updateSnapshot)
-xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.dory
+xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.bundles
 
 # Did an install actually land? (bundle container UUID must change; new PIDs alone aren't proof)
-xcrun devicectl device info processes --device $DEV | grep -i dory
+xcrun devicectl device info processes --device $DEV | grep -i bundles
 ```
 
 A ready-made loop lives in the scratchpad script `verify_rotation.sh` (launch → wait → pull plist →
@@ -459,7 +459,7 @@ render can be compared against the props that produced it.
 
 ```sh
 tools/widget-shot/shoot.sh          # capture the home screen (all pages)
-tools/widget-shot/shoot.sh open     # open Dory first (advances the stack), then capture
+tools/widget-shot/shoot.sh open     # open Bundles first (advances the stack), then capture
 ```
 
 It prints the PNG paths and the widget's current props. Phone must be unlocked and plugged in.

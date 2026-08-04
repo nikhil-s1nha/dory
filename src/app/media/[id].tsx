@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Full-screen view of a single photo/drawing — the destination when a widget is tapped
- * (deep link `dory:///media/<id>`) and for viewing in-app. Loads the item, resolves a signed URL
+ * (deep link `bundles:///media/<id>`) and for viewing in-app. Loads the item, resolves a signed URL
  * for the private object, and marks it seen.
  */
 export default function MediaViewScreen() {

@@ -22,11 +22,11 @@ curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
   -d "$(jq -Rs '{query: .}' supabase/migrations/0001_pairing.sql)"
 ```
 
-## Verifying RLS — `DORY_RLS_OK` is success
+## Verifying RLS — `BUNDLES_RLS_OK` is success
 
 `supabase/tests/verify_*_cloud.sql` switch Postgres roles to exercise RLS as each user, then roll
 their own test data back by raising a sentinel exception on the final line. So a **successful** run
-returns the Postgres error `P0001: DORY_RLS_OK`. Any *other* error is a real failure. Don't "fix" the
+returns the Postgres error `P0001: BUNDLES_RLS_OK`. Any *other* error is a real failure. Don't "fix" the
 sentinel.
 
 When writing new verification SQL, generate ids with `gen_random_uuid()` rather than hand-typing

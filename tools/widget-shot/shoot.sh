@@ -1,11 +1,11 @@
 #!/bin/bash
-# Photograph the iPhone home screen (and optionally open Dory first), then print where the PNG
+# Photograph the iPhone home screen (and optionally open Bundles first), then print where the PNG
 # landed and what the widget's props say — so a render can be compared against what the app
 # actually delivered.
 #
 # Usage:
 #   ./shoot.sh              # just capture the home screen
-#   ./shoot.sh open         # open Dory (advancing the stack), then capture
+#   ./shoot.sh open         # open Bundles (advancing the stack), then capture
 #
 # Requires: phone unlocked + plugged in. See ../../.claude/skills/ios-device-build/ if it can't
 # reach the device.
@@ -14,11 +14,11 @@ set -uo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 DEV_UDID=00008150-001065A41445401C                      # hardware UDID, for xcodebuild
 DEV_ID=32482374-396E-5305-8C73-6AB7A47827B5             # CoreDevice identifier, for devicectl
-GROUP=group.com.nikhilsinha.dory
+GROUP=group.com.nikhilsinha.bundles
 OUT="${WIDGET_SHOT_OUT:-/tmp/widget-shot}"
 
 TEST=testCaptureHomeScreen
-[ "${1:-}" = "open" ] && TEST=testOpenDoryThenCaptureHomeScreen
+[ "${1:-}" = "open" ] && TEST=testOpenBundlesThenCaptureHomeScreen
 
 STAMP=$(date +%Y%m%d-%H%M%S)
 RESULT="$OUT/$STAMP.xcresult"
@@ -61,5 +61,5 @@ xcrun devicectl device copy from --device "$DEV_ID" \
 if [ -f "$SHOTS/widget.plist" ]; then
   echo "✓ props the app delivered:"
   plutil -convert json -o - "$SHOTS/widget.plist" \
-    | jq -c '.__expo_widgets_DoryWidget_timeline[0] | {kind:.props.kind, title:.props.title, deepLink:.props.deepLink, ts:.timestamp}'
+    | jq -c '.__expo_widgets_BundlesWidget_timeline[0] | {kind:.props.kind, title:.props.title, deepLink:.props.deepLink, ts:.timestamp}'
 fi

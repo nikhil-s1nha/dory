@@ -36,7 +36,7 @@ curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
   -d "$(jq -Rs '{query: .}' supabase/migrations/0001_pairing.sql)"
 ```
 
-A `success` run of `tests/verify_rls_cloud.sql` returns the error `P0001: DORY_RLS_OK` — that
+A `success` run of `tests/verify_rls_cloud.sql` returns the error `P0001: BUNDLES_RLS_OK` — that
 sentinel is intentional (it rolls the test data back); any other error is a real failure.
 
 ### Future option: local stack

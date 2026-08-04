@@ -1,5 +1,5 @@
 {
-  "name": "dory",
+  "name": "bundles",
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {

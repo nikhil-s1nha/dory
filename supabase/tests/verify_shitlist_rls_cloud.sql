@@ -1,6 +1,6 @@
 -- Self-contained RLS check for the shared Shitlist (Milestone 2). Runnable as one script via the
 -- Management API or psql. Verifies both partners see the couple's items while a non-member sees
--- none and cannot insert. Raises the sentinel 'DORY_SHITLIST_RLS_OK' on success (rolls back).
+-- none and cannot insert. Raises the sentinel 'BUNDLES_SHITLIST_RLS_OK' on success (rolls back).
 do $$
 declare
   a uuid := '00000000-0000-0000-0000-0000000000a1';
@@ -10,9 +10,9 @@ declare
   vis int;
 begin
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
-  values ('00000000-0000-0000-0000-000000000000', a,'authenticated','authenticated','a1@dory.test','',now(),now(),now()),
-         ('00000000-0000-0000-0000-000000000000', b,'authenticated','authenticated','b1@dory.test','',now(),now(),now()),
-         ('00000000-0000-0000-0000-000000000000', c,'authenticated','authenticated','c1@dory.test','',now(),now(),now());
+  values ('00000000-0000-0000-0000-000000000000', a,'authenticated','authenticated','a1@bundles.test','',now(),now(),now()),
+         ('00000000-0000-0000-0000-000000000000', b,'authenticated','authenticated','b1@bundles.test','',now(),now(),now()),
+         ('00000000-0000-0000-0000-000000000000', c,'authenticated','authenticated','c1@bundles.test','',now(),now(),now());
   insert into public.couples (id, member_a, member_b) values (cpl, a, b);
   update public.profiles set couple_id = cpl where id in (a,b);
 
@@ -39,5 +39,5 @@ begin
   end;
 
   reset role;
-  raise exception 'DORY_SHITLIST_RLS_OK';
+  raise exception 'BUNDLES_SHITLIST_RLS_OK';
 end $$;
