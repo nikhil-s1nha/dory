@@ -3,11 +3,11 @@ name: widget-debugging
 description: Diagnose the expo-widgets home-screen widget — blank renders, containerBackground errors, silently-empty App Group containers, the 'widget' directive transform, and what can and cannot be verified on the simulator. Use when the widget doesn't render or shows stale/no data.
 ---
 
-# Debugging the Dory widget
+# Debugging the Bundles widget
 
 The pipeline is: app foreground → `useWidgetSync` → `syncWidgetOnOpen` (`src/lib/widget-sync.ts`)
-downloads the chosen image into the App Group container → `DoryWidget.updateSnapshot(props)` →
-WidgetKit renders `widgets/dory-widget.tsx`. The widget itself never touches the network.
+downloads the chosen image into the App Group container → `BundlesWidget.updateSnapshot(props)` →
+WidgetKit renders `widgets/bundles-widget.tsx`. The widget itself never touches the network.
 
 ## Ground truth is the App Group container, not the logs
 
@@ -15,7 +15,7 @@ WidgetKit renders `widgets/dory-widget.tsx`. The widget itself never touches the
 loop on it. Instead:
 
 - Screenshot the app (a redbox will otherwise look like "the sync silently did nothing").
-- Inspect the container on disk: `group.com.nikhilsinha.dory/ExpoWidgets/` should hold
+- Inspect the container on disk: `group.com.nikhilsinha.bundles/ExpoWidgets/` should hold
   `photo-<id>.jpg` / `drawing-<id>.jpg` / `album.jpg` plus the snapshot `.plist`.
 
 `syncWidgetOnOpen` ends in a bare `catch { /* leave last good snapshot */ }`, which swallows the real
@@ -30,9 +30,9 @@ readable off the device, which beats reasoning from pixels:
 ```sh
 DEV=<device-identifier>   # from `xcrun devicectl list devices`
 xcrun devicectl device copy from --device $DEV \
-  --domain-type appGroupDataContainer --domain-identifier group.com.nikhilsinha.dory \
-  --source Library/Preferences/group.com.nikhilsinha.dory.plist --destination /tmp/w.plist
-plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_DoryWidget_timeline[0]'
+  --domain-type appGroupDataContainer --domain-identifier group.com.nikhilsinha.bundles \
+  --source Library/Preferences/group.com.nikhilsinha.bundles.plist --destination /tmp/w.plist
+plutil -convert json -o - /tmp/w.plist | jq '.__expo_widgets_BundlesWidget_timeline[0]'
 ```
 
 That yields `{props: {kind, imageFile, deepLink, title…}, timestamp}` — the stack item, the exact
@@ -43,7 +43,7 @@ doesn't show them, so don't conclude the container is empty from that alone.
 You can also drive the sync yourself instead of asking the user to tap:
 
 ```sh
-xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.dory
+xcrun devicectl device process launch --device $DEV --terminate-existing --activate com.nikhilsinha.bundles
 ```
 
 Each cold launch fires `useWidgetSync`'s mount sync → `advanceStack` → `updateSnapshot`.
@@ -84,7 +84,7 @@ delete it, and clear the Metro cache after touching it.
 **2. `ReferenceError: Can't find variable: <X>` inside the widget.**
 The directive serializes only the component's **function body**. Module-scope constants declared above
 the component are not in scope in the widget runtime. Everything the widget reads must live inside the
-`DoryWidget` function body (this is why the colour constants sit there).
+`BundlesWidget` function body (this is why the colour constants sit there).
 
 **3. "Please adopt containerBackground API" instead of a render.**
 iOS 17+ requires the **top-level** view WidgetKit renders to declare a container background.
@@ -113,7 +113,7 @@ investigating — it records what's already ruled out.**
 
 The smart stack computes correctly and reaches the **plist**: verified on device across 11 cold
 launches, all three kinds with advancing timestamps, cycling in priority order. So `stack.ts`, the
-AsyncStorage cursor (`dory.widget.cursor`, starting at `-1`), the App Group write, and
+AsyncStorage cursor (`bundles.widget.cursor`, starting at `-1`), the App Group write, and
 `updateSnapshot` are sound. `updateSnapshot` also provably reaches
 `WidgetCenter.reloadTimelines(ofKind:)`, so "the app never notifies WidgetKit" is ruled out.
 
@@ -140,7 +140,7 @@ that filter the widget shows you your own photo back, and a quiet partner looks 
 ## macOS automation, if you do need to drive the simulator
 
 - AppleScript/System Events needs **Automation** permission (keystrokes) — enough to dismiss iOS's
-  "Open in Dory?" alert on a `simctl openurl` deep link, since "Open" is the default button.
+  "Open in Bundles?" alert on a `simctl openurl` deep link, since "Open" is the default button.
 - Coordinate **clicking** through System Events additionally needs **Accessibility** permission and
   otherwise fails with `-25204`. Posting a synthetic mouse event through CoreGraphics from Python
   `ctypes` works without it.

@@ -1,7 +1,7 @@
 -- Self-contained RLS check for media items + the private Storage bucket (Milestone 3). Runnable as
 -- one script via the Management API or psql. Verifies a partner sees the couple's media rows AND
 -- storage objects while a non-member sees neither and cannot write under the couple's path.
--- Raises the sentinel 'DORY_MEDIA_RLS_OK' on success (rolls back).
+-- Raises the sentinel 'BUNDLES_MEDIA_RLS_OK' on success (rolls back).
 do $$
 declare
   a uuid := '00000000-0000-0000-0000-0000000000a2';
@@ -12,9 +12,9 @@ declare
   vis int;
 begin
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
-  values ('00000000-0000-0000-0000-000000000000', a,'authenticated','authenticated','a2@dory.test','',now(),now(),now()),
-         ('00000000-0000-0000-0000-000000000000', b,'authenticated','authenticated','b2@dory.test','',now(),now(),now()),
-         ('00000000-0000-0000-0000-000000000000', c,'authenticated','authenticated','c2@dory.test','',now(),now(),now());
+  values ('00000000-0000-0000-0000-000000000000', a,'authenticated','authenticated','a2@bundles.test','',now(),now(),now()),
+         ('00000000-0000-0000-0000-000000000000', b,'authenticated','authenticated','b2@bundles.test','',now(),now(),now()),
+         ('00000000-0000-0000-0000-000000000000', c,'authenticated','authenticated','c2@bundles.test','',now(),now(),now());
   insert into public.couples (id, member_a, member_b) values (cpl, a, b);
   update public.profiles set couple_id = cpl where id in (a,b);
 
@@ -45,5 +45,5 @@ begin
   end;
 
   reset role;
-  raise exception 'DORY_MEDIA_RLS_OK';
+  raise exception 'BUNDLES_MEDIA_RLS_OK';
 end $$;

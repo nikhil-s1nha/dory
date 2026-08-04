@@ -18,7 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
-const RETURN_URL = 'dory://spotify-auth-callback';
+const RETURN_URL = 'bundles://spotify-auth-callback';
 
 /**
  * Music (spec 3.3): connect your own Spotify, and see what your partner is playing —
@@ -84,7 +84,7 @@ export default function MusicScreen() {
     try {
       const url = await startSpotifyConnect(supabase);
       const result = await WebBrowser.openAuthSessionAsync(url, RETURN_URL);
-      // Re-check on both 'success' (the dory:// return URL was hit) and 'dismiss' (the user may have
+      // Re-check on both 'success' (the bundles:// return URL was hit) and 'dismiss' (the user may have
       // closed the sheet after the token exchange already completed server-side). Either way, pull
       // fresh state so the UI flips to Connected without leaving/reopening the screen. If nothing
       // actually connected, isSpotifyConnected stays false and the Connect button remains for retry.

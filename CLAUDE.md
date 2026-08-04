@@ -1,4 +1,4 @@
-# Dory
+# Bundles
 
 Expo SDK 57 (RN 0.86) iOS app for long-distance couples: a partner's photo, drawing, or now-playing track on a home-screen widget via `expo-widgets` + an iOS App Group, backed by Supabase.
 Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md](./CHANGELOG.md).
@@ -43,8 +43,8 @@ Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md]
 
 ## Backend / accounts — see `.claude/skills/supabase-ops/`
 
-- No Docker or local Supabase stack: SQL is applied via the Management API. `P0001: DORY_RLS_OK` is the *success* sentinel of the RLS verification scripts.
-- Redirect URI registered with Spotify is the HTTPS Edge Function URL, never `dory://` — custom schemes are rejected under Spotify's 2025 rules.
+- No Docker or local Supabase stack: SQL is applied via the Management API. `P0001: BUNDLES_RLS_OK` is the *success* sentinel of the RLS verification scripts.
+- Redirect URI registered with Spotify is the HTTPS Edge Function URL, never `bundles://` — custom schemes are rejected under Spotify's 2025 rules.
 - Secrets arrive via `! pbpaste > .file`; add the `.gitignore` entry **before** writing the file, and never print the contents.
 
 ## Working style (corrections given more than once)

@@ -1,4 +1,4 @@
-# Dory — Build Plan & Decision Log
+# Bundles — Build Plan & Decision Log
 
 A personal-scale iOS app for a long-distance couple. Your partner's photo, drawing, or
 now-playing track appears on your home screen without either of you opening an app. Widgets

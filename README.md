@@ -1,4 +1,4 @@
-# Dory
+# Bundles
 
 A small iOS app for long-distance couples. Your partner's photo, drawing, or now-playing track
 shows up on your home screen through widgets — the whole point is that glancing at your phone feels

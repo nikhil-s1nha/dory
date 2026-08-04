@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Dory",
-    "slug": "dory",
+    "name": "Bundles",
+    "slug": "bundles",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dory",
+    "scheme": "bundles",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.nikhilsinha.dory",
+      "bundleIdentifier": "com.nikhilsinha.bundles",
       "supportsTablet": false
     },
     "android": {
@@ -38,20 +38,20 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Dory uses the camera so you can send your partner a photo."
+          "cameraPermission": "Bundles uses the camera so you can send your partner a photo."
         }
       ],
       [
         "expo-widgets",
         {
-          "bundleIdentifier": "com.nikhilsinha.dory.widgets",
-          "groupIdentifier": "group.com.nikhilsinha.dory",
+          "bundleIdentifier": "com.nikhilsinha.bundles.widgets",
+          "groupIdentifier": "group.com.nikhilsinha.bundles",
           "enablePushNotifications": true,
           "src": "./widgets",
           "widgets": [
             {
-              "name": "DoryWidget",
-              "displayName": "Dory",
+              "name": "BundlesWidget",
+              "displayName": "Bundles",
               "description": "A little window into what your partner is up to.",
               "supportedFamilies": ["systemSmall", "systemMedium", "systemLarge"]
             }

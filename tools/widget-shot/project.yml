@@ -1,4 +1,4 @@
-# Minimal Xcode project whose only job is to photograph the iPhone's home screen, so the Dory
+# Minimal Xcode project whose only job is to photograph the iPhone's home screen, so the Bundles
 # widget can be verified without a human looking at the phone.
 #
 # Generated with `xcodegen` rather than hand-edited pbxproj. Regenerate with:
@@ -31,8 +31,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nikhilsinha.widgetshot.uitests
-        # No TEST_TARGET_NAME: this bundle drives Springboard and Dory by bundle id rather than
-        # hosting an app of its own, so it doesn't need to be attached to the Dory target at all.
+        # No TEST_TARGET_NAME: this bundle drives Springboard and Bundles by bundle id rather than
+        # hosting an app of its own, so it doesn't need to be attached to the Bundles target at all.
         GENERATE_INFOPLIST_FILE: "YES"
 
 schemes:

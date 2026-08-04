@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build one labelled contact sheet from many home-screen captures.
 
-Each `shoot.sh` run produces a full-screen PNG per home-screen page, and the Dory widget occupies
+Each `shoot.sh` run produces a full-screen PNG per home-screen page, and the Bundles widget occupies
 only the top-left corner of one of them. Reading every full page to find it is slow and wasteful, so
 this crops the widget region out of each capture and tiles the crops into a single image with
 captions.

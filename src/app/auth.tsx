@@ -60,7 +60,7 @@ export default function AuthScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.container}>
-          <ThemedText type="title">Dory</ThemedText>
+          <ThemedText type="title">Bundles</ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </ThemedText>

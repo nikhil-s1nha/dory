@@ -1,9 +1,9 @@
 ---
 name: ios-device-build
-description: Build, install, and verify Dory on Nikhil's physical iPhone — device selection, first-time device registration, Release builds, and confirming the app actually launched. Use this whenever a change needs on-device verification rather than the simulator (widgets, camera, push, anything visual), whenever the user says "put it on my phone" / "build to my device" / "test on the iPhone", and whenever a device build fails with a provisioning, signing, or "No script URL" error. The simulator cannot verify widgets or the camera, so reach for this skill rather than suggesting a simulator run as a substitute.
+description: Build, install, and verify Bundles on Nikhil's physical iPhone — device selection, first-time device registration, Release builds, and confirming the app actually launched. Use this whenever a change needs on-device verification rather than the simulator (widgets, camera, push, anything visual), whenever the user says "put it on my phone" / "build to my device" / "test on the iPhone", and whenever a device build fails with a provisioning, signing, or "No script URL" error. The simulator cannot verify widgets or the camera, so reach for this skill rather than suggesting a simulator run as a substitute.
 ---
 
-# Building Dory to a physical iPhone
+# Building Bundles to a physical iPhone
 
 The simulator can't show widgets (they frequently never appear in its gallery) and has no camera, so
 the phone is the only real verification surface. This is the sequence that works, in order. Each step
@@ -59,11 +59,20 @@ If the state is bad, in this order of likelihood:
 
 ## 2. Don't re-ask for signing credentials
 
-Signing is already committed to the repo: `DEVELOPMENT_TEAM = K4MBJGZLNY`, automatic style, on all
-four configurations in `ios/Dory.xcodeproj/project.pbxproj`. Verify rather than ask:
+`DEVELOPMENT_TEAM = K4MBJGZLNY`, automatic style, belongs on all four configurations in
+`ios/Bundles.xcodeproj/project.pbxproj`. Verify rather than ask:
 
 ```sh
-grep -c "DEVELOPMENT_TEAM = K4MBJGZLNY" ios/Dory.xcodeproj/project.pbxproj   # expect 4
+grep -c "DEVELOPMENT_TEAM = K4MBJGZLNY" ios/Bundles.xcodeproj/project.pbxproj   # expect 4
+```
+
+**This is not committed to the repo, despite how permanent it looks.** `/ios` is gitignored and
+`expo prebuild` does not emit `DEVELOPMENT_TEAM` at all, so every prebuild silently drops it and the
+next device build dies on signing. If the count above is 0 after a prebuild, put it back:
+
+```sh
+perl -pi -e 's/^(\t*)(PRODUCT_BUNDLE_IDENTIFIER = .*;)$/$1$2\n$1DEVELOPMENT_TEAM = K4MBJGZLNY;/' \
+  ios/Bundles.xcodeproj/project.pbxproj
 ```
 
 **Apple ID vs Team ID** — these get conflated, and the confusion sends people to the wrong fix:
@@ -77,10 +86,37 @@ So: a build failing to *authenticate* or *create profiles* means the Apple ID is
 Accounts. It does **not** mean the Team ID is wrong. Don't go hunting for a Team ID to fix an
 auth error.
 
-App IDs, App Groups, and the widget identifier all auto-register through automatic signing on first
-device build — none of them are created by hand in the developer portal. The one hard rule is that
-the extension's bundle id must be prefixed by the app's (`com.nikhilsinha.dory` →
-`com.nikhilsinha.dory.widgets`), which it already is.
+The extension's bundle id must be prefixed by the app's (`com.nikhilsinha.bundles` →
+`com.nikhilsinha.bundles.widgets`), which it already is.
+
+**Automatic signing from the command line does NOT register App Groups.** This was previously
+recorded here as auto-handled; it isn't, and the rename to Bundles proved it over two failed builds.
+`xcodebuild`/`expo run:ios` will not create an App Group identifier, and when the group is missing it
+silently falls back to the wildcard `iOS Team Provisioning Profile: *`, which supports neither App
+Groups nor Push. The failure reads as seven signing errors:
+
+```
+Provisioning Profile "iOS Team Provisioning Profile: *" does not support the App Groups capability.
+Provisioning profile "…" doesn't include the aps-environment and com.apple.security.application-groups entitlements.
+```
+
+Retrying the build does not help. Fix it once, per bundle id:
+
+1. Create the group in the portal — [Identifiers → App Groups](https://developer.apple.com/account/resources/identifiers/list/applicationGroup)
+   → ＋ → App Groups → identifier `group.com.nikhilsinha.bundles`. Only the *portal* can create this.
+2. Open `ios/Bundles.xcworkspace` in the **Xcode GUI** and visit Signing & Capabilities for **both**
+   the `Bundles` and `ExpoWidgetsTarget` targets. The GUI registers the App IDs and attaches App
+   Groups (plus Push on the app target); the command line will not do this for you.
+
+Confirm real profiles exist before rebuilding — this takes seconds and saves a full arm64 compile:
+
+```sh
+find ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles -name "*.mobileprovision" -mmin -120 \
+  | while read -r f; do security cms -D -i "$f" | grep -q "group.com.nikhilsinha.bundles" && echo "$f"; done
+```
+
+Expect two: `com.nikhilsinha.bundles` (with `aps-environment`) and `com.nikhilsinha.bundles.widgets`
+(without — push is app-target only, by design).
 
 ## 3. If the phone has never been built to before, register it explicitly
 
@@ -88,17 +124,17 @@ Don't ask the user whether the phone has been built to before — they often won
 can just look:
 
 ```sh
-xcrun devicectl device info apps --device <identifier> | grep -i dory
+xcrun devicectl device info apps --device <identifier> | grep -i bundles
 ```
 
-If Dory is already installed, the device is already on the team's device list and this whole step is
+If Bundles is already installed, the device is already on the team's device list and this whole step is
 a no-op — skip straight to §4. Only run the registration pass when it's absent.
 
 A device Apple has never seen fails like this, on **both** targets:
 
 ```
-Provisioning profile "…com.nikhilsinha.dory.widgets" doesn't include the currently selected device
-Provisioning profile "…com.nikhilsinha.dory" doesn't include the currently selected device
+Provisioning profile "…com.nikhilsinha.bundles.widgets" doesn't include the currently selected device
+Provisioning profile "…com.nikhilsinha.bundles" doesn't include the currently selected device
 ```
 
 The instinct is to retry, on the theory that the failed pass registered the device and the next one
@@ -110,8 +146,8 @@ Call `xcodebuild` directly, once, with the flag Expo omits:
 
 ```sh
 xcodebuild \
-  -workspace ios/Dory.xcworkspace \
-  -scheme Dory \
+  -workspace ios/Bundles.xcworkspace \
+  -scheme Bundles \
   -configuration Release \
   -destination "id=<UDID>" \
   -allowProvisioningUpdates \
@@ -164,13 +200,13 @@ bundle and needs no Metro at all.
 A green build is not a running app. Before the rebuild, capture what's running:
 
 ```sh
-xcrun devicectl device info processes --device <UDID> | grep -i dory
+xcrun devicectl device info processes --device <UDID> | grep -i bundles
 ```
 
 After the install completes, run it again. You're looking for two entries with **new PIDs**:
 
-- `…/Dory.app/Dory` — the app
-- `…/Dory.app/PlugIns/ExpoWidgetsTarget.appex/ExpoWidgetsTarget` — the widget extension
+- `…/Bundles.app/Bundles` — the app
+- `…/Bundles.app/PlugIns/ExpoWidgetsTarget.appex/ExpoWidgetsTarget` — the widget extension
 
 The PID comparison matters: the old build's processes can still be running, so unchanged PIDs mean
 the install didn't land even though the build passed. Same-PID output is a failure, not a pass.
@@ -180,12 +216,12 @@ Interpreting the result:
 - **App process present with a new PID** → the install landed and the app launched. This is the bar.
 - **App present, extension missing** → usually just means no widget is currently placed on the home
   screen, so WidgetKit hasn't spawned the extension. Don't loop waiting for it; ask the user to
-  add the widget (long-press home screen → ＋ → search Dory), then re-check.
+  add the widget (long-press home screen → ＋ → search Bundles), then re-check.
 - **Neither present** → the install didn't take, or the app is sitting behind the Untrusted Developer
   gate. See the decoder below.
 
 Only after the app process is confirmed do you report success — and say what you actually observed
-("Dory running on device, PID 1100, new container") rather than "build succeeded." If you can't
+("Bundles running on device, PID 1100, new container") rather than "build succeeded." If you can't
 confirm it, say that plainly instead of implying the deploy worked.
 
 One thing the process check can't see: what's on the screen. When the change being verified is
@@ -201,7 +237,7 @@ UI is right.
 | `doesn't include the currently selected device` | New device never registered; retrying won't help | The `xcodebuild` registration pass in §3 |
 | Auth / profile-creation failure | Apple ID not signed into Xcode | Xcode → Settings → Accounts → ＋ (not a Team ID problem) |
 | `No script URL provided … (null)` | Debug build with no dev-client and no reachable Metro | Rebuild `--configuration Release` |
-| "Untrusted Developer" on first launch | Cert not yet trusted on the phone | Settings → General → VPN & Device Management → the Apple ID → Trust, reopen Dory |
+| "Untrusted Developer" on first launch | Cert not yet trusted on the phone | Settings → General → VPN & Device Management → the Apple ID → Trust, reopen Bundles |
 | Background build task exits **144** | A superseded build or a killed Metro — a signal, not a failure | Ignore the code; confirm via the process check in §5 |
 | Widget still renders the old thing after a fixed build installs | A placed widget holds stale extension state | Long-press the widget → Remove → re-add |
 

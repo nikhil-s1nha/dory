@@ -1,14 +1,14 @@
 // Public (no JWT — Spotify's browser redirect can't carry one). Spotify sends the user here with
 // ?code&state; we look up who `state` belongs to, exchange the code for tokens (client secret stays
-// server-side), store them, and bounce the browser back into the app via the dory:// scheme.
+// server-side), store them, and bounce the browser back into the app via the bundles:// scheme.
 
 import { serviceClient } from '../_shared/db.ts';
 import { exchangeCode } from '../_shared/spotify.ts';
 
-const APP_RETURN = 'dory://spotify-auth-callback';
+const APP_RETURN = 'bundles://spotify-auth-callback';
 
 /**
- * Bounce the browser back into the app via a real HTTP 302 redirect to the dory:// scheme.
+ * Bounce the browser back into the app via a real HTTP 302 redirect to the bundles:// scheme.
  * iOS ASWebAuthenticationSession (used by expo-web-browser's openAuthSessionAsync) IGNORES
  * JavaScript- and <meta refresh>-initiated navigations to a custom URL scheme; it only auto-closes
  * on an actual HTTP redirect whose Location is the callback scheme (or a real link tap). So we must
@@ -18,7 +18,7 @@ function backToApp(query: string): Response {
   const target = `${APP_RETURN}?${query}`;
   const targetAttr = target.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body>
-<p style="font:16px -apple-system;padding:24px">Signed in. <a href="${targetAttr}">Return to Dory</a> if this doesn't happen automatically.</p>
+<p style="font:16px -apple-system;padding:24px">Signed in. <a href="${targetAttr}">Return to Bundles</a> if this doesn't happen automatically.</p>
 </body></html>`;
   return new Response(html, {
     status: 302,

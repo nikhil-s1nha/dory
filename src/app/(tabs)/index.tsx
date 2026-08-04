@@ -18,7 +18,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <ThemedText type="title" style={styles.title}>
-          Dory
+          Bundles
         </ThemedText>
 
         <View style={styles.grid}>
