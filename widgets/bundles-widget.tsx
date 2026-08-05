@@ -9,6 +9,7 @@ import {
   frame,
   padding,
   resizable,
+  widgetURL,
 } from '@expo/ui/swift-ui/modifiers';
 import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
@@ -45,6 +46,11 @@ const BundlesWidget = (props: BundlesWidgetProps, _environment: WidgetEnvironmen
   const TEXT = '#FFFFFF';
   const MUTED = '#AEAEB2';
 
+  // Tapping the widget opens the item, not just the app (spec 3.1/3.2 — the drawing round-trip
+  // depends on it). SwiftUI honours exactly one widgetURL per view hierarchy, so it goes on the
+  // root of whichever branch renders and nowhere else; the empty state has nothing to open.
+  const link = props.deepLink ? [widgetURL(props.deepLink)] : [];
+
   // Photo & drawing: fill the widget with the image.
   if ((props.kind === 'photo' || props.kind === 'drawing') && props.imageFile) {
     return (
@@ -55,6 +61,7 @@ const BundlesWidget = (props: BundlesWidgetProps, _environment: WidgetEnvironmen
           aspectRatio({ contentMode: 'fill' }),
           clipped(true),
           containerBackground(BG, 'widget'),
+          ...link,
         ]}
       />
     );
@@ -63,7 +70,7 @@ const BundlesWidget = (props: BundlesWidgetProps, _environment: WidgetEnvironmen
   // Music: album art beside the track + a caption.
   if (props.kind === 'music' && props.title) {
     return (
-      <HStack modifiers={[padding({ all: 12 }), containerBackground(BG, 'widget')]}>
+      <HStack modifiers={[padding({ all: 12 }), containerBackground(BG, 'widget'), ...link]}>
         {props.imageFile ? (
           <Image
             uiImage={props.imageFile}
