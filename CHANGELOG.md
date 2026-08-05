@@ -48,6 +48,16 @@ settles the M7 stretch goal. Three branches / two stacked PRs: `feat/widget-deep
 
 ### Found by running it, not reading it (simulator, 2026-08-04)
 Verified with a seeded test couple (created, exercised through RLS, and deleted afterwards):
+- 🔴 **Every image was deleted from the App Group immediately after being placed there.**
+  `File.move()` *mutates* the instance to point at its new location, so after `staged.move(target)`
+  the `staged` object **is** the target — and the `finally` cleanup deleted the file it had just put
+  in place. Not an edge case: `WIDGET_IMAGE_MAX_DIMENSION` and `WIDGET_RENDER_MAX_DIMENSION` are
+  both 600, so every image the app uploads is already within the cap and always takes the "already
+  small enough" branch, the one that moves rather than re-encodes. **The widget has therefore been
+  unable to show any newly-sent media since the 600px cap shipped** (`c186227`) — which looks
+  exactly like an empty widget, and is invisible to tests. The resize path builds a separate `File`
+  from `saveAsync`'s output and was never affected, which is why older, larger media hid it.
+  Found by streaming the simulator's `os_log`, not by reading the code.
 - **The App Group subdirectory was never created.** `downloadToAppGroup` wrote into
   `widgetsDirectory` without ensuring it existed, and downloading into a missing directory throws.
   Proven, not guessed: after adding an idempotent `create`, the directory appeared in the `bundles`
@@ -76,40 +86,11 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   registration code, so end-to-end push is unproven.
 - **No one has tapped the widget yet.** A placed widget holds stale extension state until it is
   removed and re-added, so this needs a human with the phone.
-- **The M7 preview renders, but its image content has not been seen.** On the simulator the frame
-  appears in the right place at the right medium-widget ratio, and the empty state renders
-  correctly, but **a rotation between two images has never been watched**.
+- ✅ **M7 rotation is verified on the simulator.** With a seeded partner's photo and drawing, the
+  preview showed the photo, then the drawing 15 seconds later, in priority order. Screenshots taken
+  17s apart.
 
-  How far it got, so nobody repeats the work: the data path is good (a seeded partner's photo and
-  drawing are visible to the receiving user and sign correctly), and `buildProps` is definitely
-  reached — it is what creates the App Group directory. Fixing the staging-file race cleared the
-  exception, after which the load **hangs** instead of throwing, so the image never lands. The
-  remaining suspect is `expo-image-manipulator`, which this project has already seen hang once
-  (see the drawing-send note in CLAUDE.md — a giant data URI stalled it on device). It was *not*
-  the image format: the same thing happens with real 600×600 JPEGs as with PNGs.
-
-  Further attempts, all now in the code as improvements but none the cure: staging moved out of the
-  App Group into the app's own cache (so `expo-image-manipulator` isn't reading across a sandbox
-  boundary); every step of `downloadToAppGroup` **and** both of `loadStackSnapshot`'s Supabase reads
-  got a 20s ceiling; and the preview's loading state was fixed so an unpaired/not-yet-loaded profile
-  resolves to the empty state instead of an indefinite blank frame.
-
-  **No timeout ever fires and no error is ever surfaced.** A stale Metro bundle was suspected and
-  then **ruled out**: with `expo start --clear` and a visible marker string on the home screen, the
-  marker rendered, so the app was demonstrably running the current code while the preview still
-  showed a bare frame.
-
-  That leaves genuinely contradictory evidence, which is where this stops rather than guessing
-  further. Every `await` in the load path is now bounded (both Supabase reads, the signed-URL calls,
-  download, measure, resize, encode), so the load can neither hang nor fail silently — yet it
-  produces no content, no empty state and no error, and nothing is ever written into the App Group.
-  If the effect never ran, the derived empty state would render its text; if it ran, it must resolve
-  or throw. Both are excluded by observation.
-
-  The next person should get real logs rather than infer from pixels — attach a debugger or
-  `xcrun simctl spawn <device> log stream --predicate 'process == "Bundles"'` — and check first
-  whether `useWidgetPreview`'s effect body is entered at all. Every fix listed above is sound and
-  worth keeping regardless of what that turns up.
+  Getting there uncovered the most serious bug of this whole pass — see below.
 
   Worth knowing: the simulator is a usable harness for this after all — sessions can be injected at
   `Library/Application Support/<bundle-id>/RCTAsyncLocalStorage_V1` (**not** `Documents/`, which is
