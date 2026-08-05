@@ -26,6 +26,9 @@ const CURSOR_KEY = 'bundles.widget.cursor';
 /** What the last downscale produced, surfaced through the widget props for on-device diagnosis. */
 let lastImageDebug: string | undefined;
 
+/** Makes each in-flight download's staging file unique, so concurrent syncs can't collide. */
+let stagingSequence = 0;
+
 /**
  * Download `url` into the App Group under `filename`, downscaled to a size the widget extension can
  * actually decode; return its uri.
@@ -45,13 +48,19 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
   dir.create({ intermediates: true, idempotent: true });
 
   const target = new File(dir, filename);
-  if (target.exists) target.delete();
 
   // Download beside the target first: the original is what we measure, and only the downscaled
   // derivative should ever appear under the name the widget reads.
-  const staged = new File(dir, `staging-${filename}`);
+  //
+  // The staging name carries a per-call sequence number because two syncs genuinely do overlap —
+  // `useWidgetSync` and `useWidgetPreview` both mount in the (tabs) layout, and `syncWidgetOnOpen`
+  // additionally re-runs on every AppState 'active'. Two of them racing on one fixed staging path
+  // made the download reject with `DestinationAlreadyExists`, which this module then swallowed,
+  // leaving the widget silently empty. `idempotent` covers the leftovers of a run that died before
+  // its cleanup.
+  const staged = new File(dir, `staging-${stagingSequence++}-${filename}`);
   if (staged.exists) staged.delete();
-  await File.downloadFileAsync(url, staged);
+  await File.downloadFileAsync(url, staged, { idempotent: true });
 
   try {
     const source = await ImageManipulator.manipulate(staged.uri).renderAsync();
@@ -62,6 +71,9 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
     // Already small enough — don't re-encode and lose quality for nothing. Covers square images too,
     // where either edge is the long one.
     if (longEdge <= WIDGET_RENDER_MAX_DIMENSION) {
+      // Clear the target immediately before the move, not at the top of the function: a concurrent
+      // sync may have written it in between, and moving onto an existing file fails.
+      if (target.exists) target.delete();
       await staged.move(target);
       lastImageDebug = `${width}x${height} ${decodedMb}MB kept`;
       return target.uri;
@@ -76,6 +88,7 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
 
     const rendered = await scaled.renderAsync();
     const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+    if (target.exists) target.delete();
     await new File(saved.uri).move(target);
 
     const outMb = ((rendered.width * rendered.height * 4) / 1024 / 1024).toFixed(1);
