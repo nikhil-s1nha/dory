@@ -27,6 +27,19 @@ describe('parseWidgetDeepLink', () => {
     expect(parseWidgetDeepLink(`bundles://draw?base=${id}`)).not.toBeNull();
   });
 
+  it('accepts the three-slash spelling Linking.createURL produces', () => {
+    // iOS hands back whatever spelling it was given, and these two are the same destination.
+    expect(parseWidgetDeepLink('bundles:///media/abc-123')).toEqual({
+      pathname: '/media/[id]',
+      params: { id: 'abc-123' },
+    });
+    expect(parseWidgetDeepLink('bundles:///draw?base=abc-123')).toEqual({
+      pathname: '/draw',
+      params: { base: 'abc-123' },
+    });
+    expect(parseWidgetDeepLink('bundles:///music')).toEqual({ pathname: '/music' });
+  });
+
   it('returns null rather than guessing a destination', () => {
     expect(parseWidgetDeepLink(undefined)).toBeNull();
     expect(parseWidgetDeepLink('')).toBeNull();

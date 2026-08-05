@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { useDeepLinkReplay } from '@/hooks/use-deep-link-replay';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 
 // Hold the native splash until the initial session + profile fetch settles, so the user never
@@ -17,6 +18,10 @@ SplashScreen.preventAutoHideAsync();
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
   const paired = !!profile?.coupleId;
+
+  // The screens below only exist once `paired` is true, so a widget tap that cold-starts the app
+  // resolves its URL against a navigator that doesn't have the destination yet. Replay it here.
+  useDeepLinkReplay(paired);
 
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
