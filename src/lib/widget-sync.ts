@@ -7,7 +7,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File, Paths } from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { widgetsDirectory } from 'expo-widgets';
 
@@ -65,7 +65,29 @@ const STEP_TIMEOUT_MS = 20_000;
  * happens nothing announces itself — no crash, no log — WidgetKit just keeps showing the previous
  * snapshot. Capping here rather than at upload also repairs media already sitting in Storage.
  */
-async function downloadToAppGroup(url: string, filename: string): Promise<string> {
+/**
+ * Downloads currently in flight, keyed by the App Group filename they're writing.
+ *
+ * `useWidgetSync` and `useWidgetPreview` both mount in the (tabs) layout and ask for the *same*
+ * files at the same moment. Left alone they each download, resize and re-encode the same image, and
+ * then race on the final move — which iOS rejects with `NSFileWriteFileExistsError` (Err516), since
+ * checking `target.exists` before moving is a time-of-check/time-of-use gap that both callers win.
+ * Sharing one promise per filename removes the collision by removing the duplicate work.
+ */
+const inFlight = new Map<string, Promise<string>>();
+
+function downloadToAppGroup(url: string, filename: string): Promise<string> {
+  const existing = inFlight.get(filename);
+  if (existing) return existing;
+
+  const work = downloadToAppGroupUncoordinated(url, filename).finally(() => {
+    inFlight.delete(filename);
+  });
+  inFlight.set(filename, work);
+  return work;
+}
+
+async function downloadToAppGroupUncoordinated(url: string, filename: string): Promise<string> {
   const dir = new Directory(widgetsDirectory);
   // The App Group container exists from the entitlement, but this subdirectory does not until
   // something writes it — and downloading into a missing directory throws. That makes the very
@@ -85,13 +107,18 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
   // made the download reject with `DestinationAlreadyExists`, which this module then swallowed,
   // leaving the widget silently empty. `idempotent` covers the leftovers of a run that died before
   // its cleanup.
-  // Staging lives in the app's OWN cache, not in the App Group. expo-image-manipulator reads the
-  // staged file, and pointing it at a path inside the shared container is asking it to reach across
-  // a sandbox boundary — which is where the read stopped coming back at all. Only the finished
-  // derivative crosses into the App Group, by a move, which is the one operation that has to.
-  const staged = new File(Paths.cache, `widget-staging-${stagingSequence++}-${filename}`);
+  // Staging stays *inside* the App Group, beside the target. It was briefly moved to the app's own
+  // cache on the theory that expo-image-manipulator couldn't read across the container boundary;
+  // the logs disproved that (AppleJPEG decodes the staged file happily) and the change quietly
+  // turned the final `move` into a cross-container one, which is far likelier to be rejected. Keep
+  // every file on one volume and let only the unique name solve the collision.
+  const staged = new File(dir, `staging-${stagingSequence++}-${filename}`);
   if (staged.exists) staged.delete();
   await withTimeout('download', STEP_TIMEOUT_MS, File.downloadFileAsync(url, staged, { idempotent: true }));
+
+  // `File.move` MUTATES the instance to point at its new location, so after a successful move
+  // `staged` *is* the target — and the cleanup below would delete the file it just put in place.
+  let movedIntoPlace = false;
 
   try {
     const source = await withTimeout(
@@ -110,6 +137,7 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
       // sync may have written it in between, and moving onto an existing file fails.
       if (target.exists) target.delete();
       await staged.move(target);
+      movedIntoPlace = true;
       lastImageDebug = `${width}x${height} ${decodedMb}MB kept`;
       return target.uri;
     }
@@ -134,7 +162,7 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
     lastImageDebug = `${width}x${height} ${decodedMb}MB -> ${rendered.width}x${rendered.height} ${outMb}MB`;
     return target.uri;
   } finally {
-    if (staged.exists) staged.delete();
+    if (!movedIntoPlace && staged.exists) staged.delete();
   }
 }
 
