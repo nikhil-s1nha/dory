@@ -28,7 +28,12 @@ import {
   strokeToSvgPath,
   type DrawingState,
 } from '@/domain/drawing/state';
-import { fetchMediaById, getSignedUrl, sendImage } from '@/domain/media/repository';
+import {
+  fetchMediaById,
+  getSignedUrl,
+  notifyPartnerOfSend,
+  sendImage,
+} from '@/domain/media/repository';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -98,13 +103,14 @@ export default function DrawScreen() {
       await FileSystem.writeAsStringAsync(uri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      await sendImage(supabase, {
+      const item = await sendImage(supabase, {
         coupleId: profile.coupleId,
         senderId: session.user.id,
         type: 'drawing',
         localUri: uri,
         now: Date.now(),
       });
+      await notifyPartnerOfSend(supabase, item);
       router.back();
     } catch (e) {
       setSending(false);

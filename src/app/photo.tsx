@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { sendImage } from '@/domain/media/repository';
+import { notifyPartnerOfSend, sendImage } from '@/domain/media/repository';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -59,13 +59,14 @@ export default function PhotoScreen() {
     setSending(true);
     setError(null);
     try {
-      await sendImage(supabase, {
+      const item = await sendImage(supabase, {
         coupleId: profile.coupleId,
         senderId: session.user.id,
         type: 'photo',
         localUri: captured,
         now: Date.now(),
       });
+      await notifyPartnerOfSend(supabase, item);
       router.back(); // sent — return home
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send. Try again.');

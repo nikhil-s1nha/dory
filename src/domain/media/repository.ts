@@ -82,6 +82,30 @@ export async function sendImage(
   return rowToItem(data as Row);
 }
 
+/**
+ * Ask the backend to notify the partner that `item` just arrived.
+ *
+ * This is the delivery half of spec 3.1/3.2. The widget alone can't carry a send across: iOS
+ * refreshes it on its own schedule, so without a push the partner sees the photo whenever they next
+ * happen to open the app. `notify-partner` re-derives the sender and the couple from the media row
+ * itself — we pass only the id, and it trusts the JWT, not us.
+ *
+ * Best-effort on purpose: the item is already uploaded and will still reach the widget on the next
+ * foreground, so a failed notification must never surface as a failed send.
+ */
+export async function notifyPartnerOfSend(
+  supabase: SupabaseClient,
+  item: Pick<MediaItem, 'id' | 'type'>,
+): Promise<void> {
+  try {
+    await supabase.functions.invoke('notify-partner', {
+      body: { type: item.type, mediaItemId: item.id },
+    });
+  } catch {
+    /* the send succeeded; only the doorbell failed */
+  }
+}
+
 /** Most recent media for the couple, newest first. */
 export async function fetchRecentMedia(
   supabase: SupabaseClient,
