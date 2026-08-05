@@ -79,15 +79,52 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
   }
 }
 
-interface StackContext {
+export interface StackContext {
   latestPhoto: MediaItem | null;
   latestDrawing: MediaItem | null;
   music: NowPlaying | null;
   partnerName: string;
 }
 
+/** Everything the stack needs to render: the content itself, plus which types are actually present. */
+export interface StackSnapshot {
+  ctx: StackContext;
+  present: WidgetContentType[];
+}
+
+/**
+ * Fetch what the partner currently has waiting, without advancing anything.
+ *
+ * Split out from `syncWidgetOnOpen` so the in-app preview (M7) can rotate over the same content on a
+ * timer. Advancing is deliberately *not* part of this: the widget's cursor is persisted and means
+ * "one step per app open", while the preview's is in-memory and means "one step per 15 seconds".
+ * Fusing them would let the preview scramble the widget's shipped M5 behavior.
+ */
+export async function loadStackSnapshot(coupleId: string, userId: string): Promise<StackSnapshot> {
+  // The widget is a window into what *the partner* is doing (spec 3.1/3.2: a sent item "becomes
+  // the new top-priority item in the partner's widget stack"). `fetchRecentMedia` is couple-scoped,
+  // so it also returns our own sends — filter them out, or the widget shows you your own photo
+  // back and a partner who has gone quiet looks like a broken widget.
+  const media = await fetchRecentMedia(supabase, coupleId, 20);
+  const fromPartner = media.filter((m) => m.senderId !== userId);
+  const latestPhoto = fromPartner.find((m) => m.type === 'photo') ?? null;
+  const latestDrawing = fromPartner.find((m) => m.type === 'drawing') ?? null;
+  const partner = await fetchPartnerNowPlaying(supabase, coupleId, userId);
+  const music = partner?.nowPlaying ?? null;
+
+  const present: WidgetContentType[] = [];
+  if (latestPhoto) present.push('photo');
+  if (latestDrawing) present.push('drawing');
+  if (music) present.push('music');
+
+  return {
+    ctx: { latestPhoto, latestDrawing, music, partnerName: partner?.name ?? 'Your partner' },
+    present,
+  };
+}
+
 /** Turn the chosen stack item into widget props, downloading its image into the App Group. */
-async function buildProps(
+export async function buildProps(
   item: WidgetContentType | null,
   ctx: StackContext,
 ): Promise<BundlesWidgetProps> {
@@ -124,33 +161,14 @@ async function buildProps(
  */
 export async function syncWidgetOnOpen(coupleId: string, userId: string): Promise<void> {
   try {
-    // The widget is a window into what *the partner* is doing (spec 3.1/3.2: a sent item "becomes
-    // the new top-priority item in the partner's widget stack"). `fetchRecentMedia` is couple-scoped,
-    // so it also returns our own sends — filter them out, or the widget shows you your own photo
-    // back and a partner who has gone quiet looks like a broken widget.
-    const media = await fetchRecentMedia(supabase, coupleId, 20);
-    const fromPartner = media.filter((m) => m.senderId !== userId);
-    const latestPhoto = fromPartner.find((m) => m.type === 'photo') ?? null;
-    const latestDrawing = fromPartner.find((m) => m.type === 'drawing') ?? null;
-    const partner = await fetchPartnerNowPlaying(supabase, coupleId, userId);
-    const music = partner?.nowPlaying ?? null;
-
-    const present: WidgetContentType[] = [];
-    if (latestPhoto) present.push('photo');
-    if (latestDrawing) present.push('drawing');
-    if (music) present.push('music');
+    const { ctx, present } = await loadStackSnapshot(coupleId, userId);
 
     const stored = await AsyncStorage.getItem(CURSOR_KEY);
     const prevCursor = stored === null ? INITIAL_CURSOR : Number(stored);
     const { cursor, item } = advanceStack(present, prevCursor);
     await AsyncStorage.setItem(CURSOR_KEY, String(cursor));
 
-    const props = await buildProps(item, {
-      latestPhoto,
-      latestDrawing,
-      music,
-      partnerName: partner?.name ?? 'Your partner',
-    });
+    const props = await buildProps(item, ctx);
     // `_imageDebug` is not read by the widget component — it rides along so the downscale result is
     // visible in the App Group plist, which is the only channel readable from a host machine
     // (Metro logs don't stream here, and devicectl can't reach the ExpoWidgets directory).
