@@ -37,6 +37,52 @@ final class WidgetShotUITests: XCTestCase {
     captureAllHomePages(prefix: "after-open")
   }
 
+  /// Open the URL in `WIDGET_SHOT_URL` the way a widget tap does, and photograph where it lands.
+  ///
+  /// This is how the `widgetURL` deep link gets verified without a human thumb. Tapping the widget
+  /// itself isn't scriptable — a widget's accessibility tree is opaque — but the tap's *effect* is
+  /// just "the system opens this URL against the app", which `XCUISystem.open` reproduces exactly.
+  /// What it proves is the half that was actually broken: that the app routes `bundles://…` to the
+  /// right screen. That the widget carries the URL at all is visible in the App Group plist.
+  func testOpenDeepLink() throws {
+    let raw = ProcessInfo.processInfo.environment["WIDGET_SHOT_URL"] ?? "bundles://music"
+    guard let url = URL(string: raw) else {
+      XCTFail("WIDGET_SHOT_URL is not a valid URL: \(raw)")
+      return
+    }
+
+    // Start from a cold-ish state so we can't mistake "the app was already on that screen" for
+    // "the deep link worked".
+    let bundles = XCUIApplication(bundleIdentifier: "com.nikhilsinha.bundles")
+    bundles.terminate()
+    Thread.sleep(forTimeInterval: 2)
+
+    XCUIDevice.shared.system.open(url)
+
+    // The destination screens fetch a signed URL and an image before they render anything.
+    Thread.sleep(forTimeInterval: 12)
+    attach(XCUIScreen.main.screenshot(), named: "deeplink")
+  }
+
+  /// Photograph Notification Center, to prove a push actually arrived.
+  ///
+  /// A banner is gone in about five seconds — far shorter than the time it takes to start a UI
+  /// test — so racing it is hopeless. Notification Center keeps the delivered notification around,
+  /// which makes it the only reliable surface to screenshot after the fact.
+  func testCaptureNotificationCenter() throws {
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 2)
+
+    // Swipe down from the very top-left; from the middle iOS opens Control Center instead.
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+    let top = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.0))
+    let down = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.7))
+    top.press(forDuration: 0.1, thenDragTo: down)
+    Thread.sleep(forTimeInterval: 3)
+
+    attach(XCUIScreen.main.screenshot(), named: "notification-center")
+  }
+
   /// Capture every home-screen page.
   ///
   /// Locating the Bundles widget programmatically is unreliable — a widget's accessibility tree is
