@@ -88,11 +88,18 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   (see the drawing-send note in CLAUDE.md — a giant data URI stalled it on device). It was *not*
   the image format: the same thing happens with real 600×600 JPEGs as with PNGs.
 
-  Two further attempts, both now in the code as improvements but neither the cure: staging was moved
-  out of the App Group into the app's own cache (so `expo-image-manipulator` isn't reading across a
-  sandbox boundary), and every step of `downloadToAppGroup` got a 20s ceiling. **No timeout ever
-  fires**, which localises the stall *upstream* of `downloadToAppGroup` — in `loadStackSnapshot`'s
-  Supabase reads, which are still unbounded. That is the next thing to instrument.
+  Further attempts, all now in the code as improvements but none the cure: staging moved out of the
+  App Group into the app's own cache (so `expo-image-manipulator` isn't reading across a sandbox
+  boundary); every step of `downloadToAppGroup` **and** both of `loadStackSnapshot`'s Supabase reads
+  got a 20s ceiling; and the preview's loading state was fixed so an unpaired/not-yet-loaded profile
+  resolves to the empty state instead of an indefinite blank frame.
+
+  **No timeout ever fires and no error is ever surfaced**, which is not consistent with any code
+  path in this module — by the end, edits that should certainly have rendered text produced no
+  change at all. The most likely explanation is that Metro was serving a stale bundle for the last
+  several cycles, i.e. the later observations say nothing about the code. Anyone resuming this
+  should start from a clean `expo start --clear` and re-confirm the bundle is live (change a
+  visible string) *before* drawing conclusions from what the preview shows.
 
   Worth knowing: the simulator is a usable harness for this after all — sessions can be injected at
   `Library/Application Support/<bundle-id>/RCTAsyncLocalStorage_V1` (**not** `Documents/`, which is
