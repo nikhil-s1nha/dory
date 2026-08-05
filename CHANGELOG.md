@@ -2,6 +2,68 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Phase B — the home-screen widget (M3 + M4 + M5 widget half)
+
+**Shipped 2026-07-25 → 2026-08-03; recorded here 2026-08-04.** Apple enrollment cleared and Phase B
+was built during the M5 device-verification push, but this changelog was never updated — six commits
+(`d9e03c4` → `c186227`) went unrecorded. Written up now from the commits and the device evidence.
+
+### Built
+- **Widget target + App Group** (`d9e03c4`): `expo-widgets@57` configured in `app.json` — App Group
+  `group.com.nikhilsinha.bundles`, widget bundle `com.nikhilsinha.bundles.widgets`, push entitlement,
+  one `BundlesWidget` across small/medium/large.
+- **The widget** — `widgets/bundles-widget.tsx`: renders the current smart-stack item from props
+  pushed via `updateSnapshot` — photo/drawing full-bleed, music as album art + title + artist +
+  caption, plus an empty state. Images are read from the App Group (`Image uiImage`); **the widget
+  never touches the network**.
+- **App-side sync** (`0d5d46d`) — `src/lib/widget-sync.ts`: on foreground, resolve the current item
+  via the M5 stack logic, download its image into the App Group, `updateSnapshot`.
+  `src/hooks/use-widget-sync.ts` (wired into `(tabs)/_layout.tsx`) advances the stack one step per
+  open (spec 3.4) and refreshes on `AppState` active. This completes **M5's Phase B wiring**.
+- **`babel.config.js`** — without it `babel-preset-expo` doesn't run, the `'widget'` directive isn't
+  transformed, and `createWidget` throws "2nd argument cannot be cast to String".
+
+### Fixed (all three found only on a physical device)
+- **`containerBackground`** (`a856a1c`, `8d03a41`): iOS 17+ refuses to render a widget that doesn't
+  declare its background. The `@expo/ui` JS modifier isn't seen at WidgetKit's required top level
+  (expo/expo#46200), so it's applied by a **`patch-package` patch** to `expo-widgets`'
+  `WidgetsEntryView`. Also moved the `BG`/`TEXT`/`MUTED` constants *inside* the component — the
+  `'widget'` directive serializes only the function body, so module-scope consts throw
+  `ReferenceError` in the widget runtime.
+- **Own sends leaking into the stack** (`a0aee19`): `fetchRecentMedia` is couple-scoped, so the
+  widget showed you your own photo back. Filtered by `senderId` per spec 3.1/3.2 — the widget is a
+  window into *the partner*.
+- **The frozen widget** (`c186227`): every image except the app logo failed to render. Cause was
+  **decoded bitmap size** — the extension shares its ~30MB budget with the expo-widgets JS runtime,
+  and an over-budget render fails *silently*, leaving WidgetKit on the last good snapshot. Measured
+  on device: 4.0MB decoded rendered, 5.5MB did not. Fixed by capping the long edge at
+  `WIDGET_RENDER_MAX_DIMENSION = 600` when writing into the App Group — not only at upload — so
+  media already in Storage is repaired. Full history in [WIDGET-FREEZE.md](./WIDGET-FREEZE.md).
+- Device polish (`a856a1c`): photo Send label was white-on-white; drawing canvas got a solid black
+  Skia `<Fill>` + white default stroke + a visible toolbar; drawing Send no longer hangs (write the
+  snapshot to a temp file and pass a `file://` URI instead of a giant data URI, which stalled
+  `expo-image-manipulator` on device); the Spotify callback page auto-redirects into the app.
+
+### Verified
+- **On device, by home-screen screenshot** (`tools/widget-shot/`): photo, drawing, and music all
+  render, and the per-open cursor advances through them. This is the definitive check — widgets
+  frequently never appear in the *simulator's* widget gallery (Apple-documented).
+- On simulator: extension compiles, the babel transform works, sync writes `photo-<id>.jpg` into
+  the App Group and `updateSnapshot` writes the snapshot plist.
+- 118/118 tests; typecheck + lint clean at each commit.
+
+### Not built — Phase B is not finished
+- **Push dispatch: no code exists.** `expo-notifications` is installed and the entitlement is on,
+  but there is no token registration, no notification handler, and no push Edge Function. The
+  widget therefore refreshes **only on app foreground**, and the visible "…sent you a photo" /
+  "…drew you something" notification — the *reliable* channel per the constraint in `PLAN.md` —
+  is absent. Spec 3.1/3.2 are not yet met.
+- **The widget's tap deep-link never fires.** `buildProps` computes `deepLink` for every branch and
+  `BundlesWidgetProps` declares it, but no branch of the widget tree applies a `widgetURL` modifier,
+  so the prop is inert. Tapping opens the app wherever it was rather than
+  `bundles://media/<id>` / `bundles://draw?base=<id>`, which breaks the spec 3.2 round-trip entry
+  point even though both destination screens already work.
+
 ## M6 — Spotify OAuth + now-playing (foundation)
 
 **In progress.** The pure logic and schema are built; the OAuth flow, Edge Functions, and
@@ -57,7 +119,8 @@ whole chain with real data:
   listening to All I Want"** — the spec's exact copy. RLS confirmed: Sam reads Alex's `now_playing`
   but **cannot** read Alex's tokens (owner-only).
 
-Spec 3.3 delivered in-app. Remaining: widget display of now-playing = Phase B (with the widgets).
+Spec 3.3 delivered in-app. Widget display of now-playing landed in Phase B and **renders on device**
+(see the Phase B section at the top), so M6 is complete.
 Minor: a dev-only "view warnings" toast appeared on the Music screen — non-blocking, to check later.
 
 ## M5 — Smart-stack priority & advancement (logic)
@@ -77,9 +140,11 @@ render land in Phase B (with the widgets).
   wraparound. typecheck + lint clean.
 
 ### Phase B wiring (with the widgets)
-- On app open: read the cursor from the App Group, `advanceStack`, write it back + the resolved
-  item into `state.json` for the widget.
-- On a push for a new item: `cursorForType` so the widget jumps straight to it.
+- ✅ On app open: read the cursor from the App Group, `advanceStack`, write it back + the resolved
+  item for the widget. Delivered in `0d5d46d` (`src/lib/widget-sync.ts`,
+  `src/hooks/use-widget-sync.ts`); cycling verified on device.
+- ⬜ On a push for a new item: `cursorForType` so the widget jumps straight to it. Blocked on push,
+  which is still unbuilt — `cursorForType` exists and is tested, but nothing calls it.
 
 ## Shitlist rework — fluid Apple Notes editing + NaN fix
 
@@ -139,9 +204,10 @@ automation available here), but the stroke model is unit-tested and the canvas r
   a wrapping `View`.
 - `npm test` — 83/83 (+11 drawing); typecheck + lint clean.
 
-### Phase B (shared with M3, pending Apple enrollment)
-- Drawing widget: static render of the latest drawing; tap → `bundles:///draw?base=<id>` (round-trip).
-- Push dispatch to trigger the widget reload + the visible "…drew you something" notification.
+### Phase B (shared with M3) — partially delivered, see the Phase B section at the top
+- ✅ Drawing widget: static render of the latest drawing — verified on device.
+- ⬜ Tap → `bundles://draw?base=<id>` (the round-trip): `deepLink` is computed but inert in the widget.
+- ⬜ Push dispatch + the visible "…drew you something" notification — **not built**.
 
 ## M3 — Photo → widget (Phase A)
 
@@ -176,12 +242,11 @@ has no camera, so live capture is only fully exercised on a device.
   camera). Screenshots captured.
 - `npm test` — 72/72 (+ media path & repository suites); typecheck + lint clean.
 
-### Phase B — pending Apple enrollment
-- App Group entitlement + container write (the widget-cache seam in `src/constants/app-group.ts`).
-- `expo-widgets` widget: render the latest photo, tap → `bundles:///media/<id>`. (First real
-  expo-widgets test; App-Group `state.json` keeps a Swift fallback cheap if needed.)
-- Push dispatch (Edge Function) to trigger the widget timeline reload on the recipient's device,
-  plus the visible "…sent you a photo" notification (the reliable channel).
+### Phase B — mostly delivered, see the Phase B section at the top
+- ✅ App Group entitlement + container write (the widget-cache seam in `src/constants/app-group.ts`).
+- ✅ `expo-widgets` widget rendering the latest photo — verified on device.
+- ⬜ Tap → `bundles://media/<id>`: the `deepLink` prop is computed but never applied in the widget.
+- ⬜ Push dispatch (Edge Function) + the visible "…sent you a photo" notification — **not built**.
 
 ## M2 — Home screen, tab bar, Shitlist
 
