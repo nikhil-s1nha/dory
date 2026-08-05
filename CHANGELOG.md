@@ -46,13 +46,33 @@ settles the M7 stretch goal. Three branches / two stacked PRs: `feat/widget-deep
   grants would be wrong), and that the handover trigger reassigns a shared device.
 - Release build compiled and installed on the iPhone 17 (app + widget extension both on new PIDs).
 
+### Found by running it, not reading it (simulator, 2026-08-04)
+Verified with a seeded test couple (created, exercised through RLS, and deleted afterwards):
+- **The App Group subdirectory was never created.** `downloadToAppGroup` wrote into
+  `widgetsDirectory` without ensuring it existed, and downloading into a missing directory throws.
+  Proven, not guessed: after adding an idempotent `create`, the directory appeared in the `bundles`
+  App Group container, which had been empty since the rename. **The first sync after any fresh
+  install has been failing silently** — for the widget as much as the preview.
+- **`media_items.sender_id` was `not null` with `on delete set null`** (`0003_media.sql:10`) — a
+  self-contradiction that made it impossible to delete any account that had ever sent a photo or
+  drawing (Postgres `23502`). Fixed to `on delete cascade` in `0009_media_sender_cascade.sql`,
+  applied and confirmed by a delete that now succeeds.
+- **Push asked for notification permission before checking for real hardware**, burning the one-shot
+  iOS prompt on a simulator that can never receive a token.
+- **The preview rendered an indefinite black rectangle** when its load failed, instead of the empty
+  state.
+
 ### Not verified — do not read this as delivered
 - **No notification has been observed arriving on a phone.** The build on the device predates the
   registration code, so end-to-end push is unproven.
 - **No one has tapped the widget yet.** A placed widget holds stale extension state until it is
   removed and re-added, so this needs a human with the phone.
-- **The M7 preview has not been seen running.** It is gate-green but has not been watched through a
-  rotation cycle.
+- **The M7 preview renders, but its image content has not been seen.** On the simulator the frame
+  appears in the right place at the right medium-widget ratio, and the empty state renders
+  correctly; the seeded photo/drawing never reached the App Group, so a full rotation between two
+  images has *not* been watched. The data path is known-good up to that point (`buildProps` was
+  demonstrably reached — it is what created the directory), so the remaining unknown is the
+  download/manipulate step, possibly specific to the synthetic PNGs used as test media.
 
 ### Rejected, with evidence
 - **The Live Activity branch of spec 3.4** was not built. Not for the expected reason: Apple's rate
