@@ -164,11 +164,18 @@ export async function loadStackSnapshot(coupleId: string, userId: string): Promi
   // the new top-priority item in the partner's widget stack"). `fetchRecentMedia` is couple-scoped,
   // so it also returns our own sends — filter them out, or the widget shows you your own photo
   // back and a partner who has gone quiet looks like a broken widget.
-  const media = await fetchRecentMedia(supabase, coupleId, 20);
+  // Bounded like every other step here: these are network reads on a screen that renders whatever
+  // they return, so an unanswered request would otherwise leave the widget and the preview waiting
+  // forever with nothing to show and nothing logged.
+  const media = await withTimeout('fetchRecentMedia', STEP_TIMEOUT_MS, fetchRecentMedia(supabase, coupleId, 20));
   const fromPartner = media.filter((m) => m.senderId !== userId);
   const latestPhoto = fromPartner.find((m) => m.type === 'photo') ?? null;
   const latestDrawing = fromPartner.find((m) => m.type === 'drawing') ?? null;
-  const partner = await fetchPartnerNowPlaying(supabase, coupleId, userId);
+  const partner = await withTimeout(
+    'fetchPartnerNowPlaying',
+    STEP_TIMEOUT_MS,
+    fetchPartnerNowPlaying(supabase, coupleId, userId),
+  );
   const music = partner?.nowPlaying ?? null;
 
   const present: WidgetContentType[] = [];

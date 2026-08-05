@@ -35,6 +35,8 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
 
   // Load (and reload on foreground) what the partner currently has waiting.
   useEffect(() => {
+    // Nothing to load until we know who the couple is. The "not paired yet" case is resolved at
+    // render time instead of here — see the return below.
     if (!coupleId || !userId) return;
     let cancelled = false;
 
@@ -107,5 +109,13 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
     };
   }, [present, frames]);
 
-  return { props, isLoading };
+  // Derived, not stored. `isLoading` starts true and is only cleared by a load that runs, so before
+  // a couple is known the preview would otherwise sit on a bare black rectangle forever — no empty
+  // state, no error, indistinguishable from a broken render. Computing it here rather than calling
+  // setState from the effect keeps that out of the render loop entirely.
+  const hasCouple = Boolean(coupleId && userId);
+  return {
+    props: props ?? (hasCouple ? null : { kind: 'empty' }),
+    isLoading: hasCouple && isLoading,
+  };
 }
