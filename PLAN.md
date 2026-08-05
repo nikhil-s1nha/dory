@@ -52,12 +52,12 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M0 | Scaffolding, CI, architecture decision | ✅ **complete** — lint/typecheck/test green; app builds, boots, and renders on the iOS simulator |
 | M1 | Accounts, partner pairing, backend skeleton | ✅ **complete** — live RLS verified on cloud Supabase; auth + pairing screens render and gate correctly on the simulator; 46 tests. One flag: email confirmation blocks real sign-ups (see CHANGELOG) |
 | M2 | Home screen, tab bar, Shitlist | ✅ **complete** — home grid + Instagram-style tab bar + shared Shitlist (Apple Notes UX, realtime); RLS verified; rendered on simulator against live data; 64 tests |
-| M3 | Photo → widget | 🟡 **widget shipped; push outstanding** — Phase A (media backend + Storage RLS verified live, send/upload end-to-end, capture + full-view) **plus Phase B's App Group write and photo widget, verified on device by home-screen screenshot**. Outstanding: push dispatch (not built) and the widget's tap deep-link (computed but never applied) |
-| M4 | Drawing canvas + round-trip | 🟡 **widget shipped; push + tap outstanding** — Phase A (Skia canvas + tools, tested stroke model, send via media pipeline, round-trip preload) **plus the drawing widget rendering on device**. The `bundles://draw?base=<id>` round-trip entry point is dead until the widget applies `deepLink`; push outstanding |
+| M3 | Photo → widget | 🟡 **built end-to-end; final device confirmation outstanding** — Phase A (media backend + Storage RLS verified live, send/upload end-to-end, capture + full-view) plus Phase B's App Group write and photo widget, verified on device by screenshot. Push dispatch and the tap deep-link are now **built, gate-green and deployed** (migration applied, `notify-partner` live, RLS verified by `BUNDLES_PUSH_RLS_OK`); neither has yet been *observed* working on the phone |
+| M4 | Drawing canvas + round-trip | 🟡 **built end-to-end; final device confirmation outstanding** — Phase A (Skia canvas + tools, tested stroke model, send via media pipeline, round-trip preload) plus the drawing widget rendering on device. The `bundles://draw?base=<id>` round-trip entry point is now live in the widget tree via `widgetURL`, but the tap itself is unconfirmed on device |
 | M5 | Smart-stack priority & advancement | ✅ **complete** — pure selection/advancement (priority photo>drawing>music, per-open cycling), 15 tests; cursor persistence, per-open delivery, and on-screen rendering of photo, drawing and music all **verified on device** by screenshot. The frozen-widget bug was decoded-bitmap size in the extension — fixed in `c186227`, see [WIDGET-FREEZE.md](./WIDGET-FREEZE.md) |
 | M6 | Spotify OAuth + now-playing | ✅ **complete** — verified live end-to-end 2026-07-24: owner registered the redirect URI, real OAuth round-trip, 2-min cron poller tracked a real song change, and the partner sees album art + "Alex is listening to …" with tokens still owner-only. Now-playing also **renders on the widget on device** (M5). Minor: a dev-only "view warnings" toast on the Music screen |
-| M7 | Stretch: 15s Live Activity rotation | pending |
-| M8 | Polish + full-flow pass | pending |
+| M7 | Stretch: 15s rotation | 🟢 **built as the in-app preview; the Live Activity branch is not achievable** — spec 3.4 offers "a Live Activity **or the app's own in-app widget preview**", and the preview branch is built and gate-green (23 new tests). See [the M7 note](#m7--why-the-live-activity-branch-was-not-built) for why the other branch was rejected on evidence rather than skipped |
+| M8 | Polish + full-flow pass | 🟡 **in progress** — docs reconciled; a full flow pass on device is the remaining work |
 
 Ordering note: Spotify (spec M5) and smart stack (spec M6) are swapped per the deprioritization.
 
@@ -80,22 +80,47 @@ cleared and **most of Phase B shipped under the M5 device-verification push** (`
   600px App Group downscale that fixed the silent frozen-widget failure (`c186227`,
   [WIDGET-FREEZE.md](./WIDGET-FREEZE.md)).
 
-**Still outstanding — the two genuinely unbuilt pieces:**
+**Both formerly-outstanding pieces were built on 2026-08-04:**
 
-1. **Push dispatch — not started.** `expo-notifications` is installed and
-   `enablePushNotifications: true` is set on the `expo-widgets` plugin, but there is *no* code:
-   no device-token registration, no notification handler, and no push Edge Function
-   (`supabase/functions/` holds only the three `spotify-*` functions). So the widget refreshes
-   **only when the app is foregrounded**, and the visible "…sent you a photo" / "…drew you
-   something" notification — constraint 1's *reliable* delivery channel — does not exist. This is
-   the single largest gap between the build and spec 3.1/3.2.
-2. **Widget tap deep-link is dead.** `buildProps` computes the right `deepLink` for every branch
-   (`bundles://media/<id>`, `bundles://draw?base=<id>`, `bundles://music`) and the prop is declared
-   in `BundlesWidgetProps`, but the widget tree never applies it — there is no `widgetURL` modifier
-   on any branch. Tapping the widget opens the app wherever it was, not the item. This silently
-   breaks the spec 3.2 round-trip entry point, and both screens it should land on already exist.
+1. **Push dispatch — built and deployed.** `push_tokens` (owner-only RLS, plus a trigger that hands
+   a device over when a second account signs in on it) and the `notify-partner` Edge Function are
+   live on the cloud project; RLS is verified by `BUNDLES_PUSH_RLS_OK`. Delivery is **raw APNs**
+   over HTTP/2 with the project's own `.p8` key rather than Expo's push service, which this project
+   has no EAS credentials for. Registration stores the native token from `getDevicePushTokenAsync`;
+   sandbox-vs-production is read from the `aps-environment` entitlement, *not* `__DEV__` (a Release
+   build installed by Xcode is still sandbox, and that is how this app reaches the phone).
+   `src/lib/push.ts`, `src/hooks/use-push.ts`, mounted beside `useWidgetSync`.
+2. **Widget tap deep-link — applied.** `widgetURL` now sits on the root of each rendering branch
+   (SwiftUI honours exactly one per hierarchy), so the spec 3.2 round-trip entry point is reachable.
 
-Both belong to M3/M4 rather than M7/M8; neither is blocked on anything external.
+**What is still unproven:** neither has been *observed* on the phone. The build that verified the
+deep-link change is installed, but the widget must be removed and re-added before a tap means
+anything, and the push path additionally needs a build carrying the registration code. Written and
+gate-green is not the same as delivered, and this list should not be marked ✅ until someone has
+watched a notification arrive and a widget tap land.
+
+## M7 — why the Live Activity branch was not built
+
+Spec 3.4's stretch goal names two surfaces: "while the user is actively engaged with a Live Activity
+**or the app's own in-app widget preview**". The preview branch is built; the Live Activity branch
+was investigated and rejected on evidence. SPEC.md §5 asks for exactly this to be surfaced rather
+than quietly reinterpreted.
+
+- **The rate limit is not the blocker,** contrary to the obvious assumption. Apple's budget language
+  is scoped word-for-word to *ActivityKit push notifications*, and `Activity.update(_:)` is
+  documented for foreground and background use with no stated frequency cap. The only documented
+  local limit is a 4 KB content-state size. `NSSupportsLiveActivitiesFrequentUpdates` is likewise
+  push-only by Apple's own wording.
+- **Visibility is the blocker.** Apple's HIG: "Your Live Activity appears in the Dynamic Island
+  **while your app isn't in use**." The foreground is the only place a 15-second *local* rotation can
+  be driven from, and it is precisely where the surface isn't shown; background the app so it becomes
+  visible and the JS runtime suspends, stopping the rotation. Driving it by push instead would need
+  240 pushes/hour against a budget whose documented recovery is "up to 24 hours".
+- **There is also no "actively engaged" signal** — iOS exposes no API for "the user is looking at
+  this", which PLAN.md and SPEC.md already concede for widgets.
+
+⚠️ The visibility claim is Apple *design guidance*, not an API contract. It has not been falsified on
+device here. If someone wants the Live Activity branch, that ~20-minute check is where to start.
 
 ## Verification discipline (every milestone)
 

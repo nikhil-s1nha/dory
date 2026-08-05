@@ -2,6 +2,66 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Push dispatch, widget tap, and the M7 stretch goal
+
+**Built 2026-08-04.** Closes the two pieces the Phase B entry below lists as "Not built", and
+settles the M7 stretch goal. Three branches / two stacked PRs: `feat/widget-deep-link` (#5),
+`feat/push-dispatch` (#6), `feat/m7-widget-preview`.
+
+### Built
+- **The widget's tap deep-link now fires** — `widgets/bundles-widget.tsx`. `widgetURL` is applied to
+  the root of each rendering branch; SwiftUI honours exactly one per view hierarchy, so it does not
+  go on the children, and the empty state gets none. The `bundles://draw?base=<id>` round-trip entry
+  point of spec 3.2 is reachable for the first time.
+- **Push dispatch** — the largest gap named in `PLAN.md`.
+  - `supabase/migrations/0008_push_tokens.sql`: `push_tokens` keyed on the device token, owner-only
+    RLS, plus a BEFORE INSERT trigger that hands a device over when a second account signs in on it
+    (RLS alone cannot express that delete, and without it the previous user's alerts follow the phone).
+  - `supabase/functions/notify-partner/index.ts`: signs an ES256 APNs JWT with the project's `.p8`
+    (Web Crypto, raw r‖s — APNs rejects DER), caches it for 50 minutes, and posts a **visible** alert
+    to each of the partner's tokens. **Raw APNs, not Expo's push service** — this project owns its key
+    and has no EAS credential setup. Takes only a media id and re-derives sender/couple/type from the
+    row, so a caller cannot notify someone else's partner. Prunes dead tokens on 410/`BadDeviceToken`.
+  - `src/lib/push.ts` / `src/hooks/use-push.ts`: registration, foreground presentation, widget refresh
+    on arrival, and routing on tap (photo → full view, drawing → canvas preloaded, music → music).
+    Sandbox-vs-production comes from the `aps-environment` entitlement via `expo-application`, **not**
+    `__DEV__` — a Release build installed by Xcode is still sandbox, which is exactly how this app
+    reaches the phone, so `__DEV__` would get every current install backwards.
+  - Sign-out drops the device row *before* `auth.signOut()`, while RLS still permits the delete.
+- **M7 — the in-app widget preview** (`src/components/widget-preview.tsx`,
+  `src/hooks/use-widget-preview.ts`, `src/domain/widget/rotation.ts`, `deep-link.ts`): rotates
+  photo → drawing → music every 15s on the home screen, below the 2×2 grid. It mirrors the widget's
+  own SwiftUI tree against the same ≤600px App Group files, and cannot literally reuse the widget
+  component — babel rewrites a `'widget'`-directive function into a *string literal*, so it isn't
+  callable in the app bundle.
+
+### Verified
+- `lint` + `typecheck` clean; **150 tests, 16 suites** (was 118) — 19 covering push registration
+  (row mapping, idempotent upsert, permission-declined, simulator, empty-token) and 23 covering
+  rotation and deep-link parsing.
+- **Live against the cloud project:** migration applied, `notify-partner` deployed with its three
+  secrets, and the function returns 401 to an unauthenticated call. RLS verified by
+  `BUNDLES_PUSH_RLS_OK` — including the property most easily got wrong here, that a *partner* has no
+  read access at all (dispatch is service-role, so the couple-scoped visibility every other table
+  grants would be wrong), and that the handover trigger reassigns a shared device.
+- Release build compiled and installed on the iPhone 17 (app + widget extension both on new PIDs).
+
+### Not verified — do not read this as delivered
+- **No notification has been observed arriving on a phone.** The build on the device predates the
+  registration code, so end-to-end push is unproven.
+- **No one has tapped the widget yet.** A placed widget holds stale extension state until it is
+  removed and re-added, so this needs a human with the phone.
+- **The M7 preview has not been seen running.** It is gate-green but has not been watched through a
+  rotation cycle.
+
+### Rejected, with evidence
+- **The Live Activity branch of spec 3.4** was not built. Not for the expected reason: Apple's rate
+  limit is scoped word-for-word to ActivityKit *push* notifications, and local `Activity.update(_:)`
+  has no documented frequency cap. The blocker is that a Live Activity is shown "while your app
+  isn't in use" — the foreground, the only place a 15s local rotation can run, is where it isn't
+  visible. Spec 3.4 offers the in-app preview as an equal alternative, which is what was built. The
+  visibility claim is HIG guidance rather than an API contract and has not been falsified on device.
+
 ## Phase B — the home-screen widget (M3 + M4 + M5 widget half)
 
 **Shipped 2026-07-25 → 2026-08-03; recorded here 2026-08-04.** Apple enrollment cleared and Phase B
@@ -53,6 +113,8 @@ was built during the M5 device-verification push, but this changelog was never u
 - 118/118 tests; typecheck + lint clean at each commit.
 
 ### Not built — Phase B is not finished
+> **Superseded 2026-08-04.** Both items below were built; see the entry at the top of this file.
+
 - **Push dispatch: no code exists.** `expo-notifications` is installed and the entitlement is on,
   but there is no token registration, no notification handler, and no push Edge Function. The
   widget therefore refreshes **only on app foreground**, and the visible "…sent you a photo" /
