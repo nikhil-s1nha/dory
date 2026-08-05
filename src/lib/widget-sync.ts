@@ -7,7 +7,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { widgetsDirectory } from 'expo-widgets';
 
@@ -28,6 +28,33 @@ let lastImageDebug: string | undefined;
 
 /** Makes each in-flight download's staging file unique, so concurrent syncs can't collide. */
 let stagingSequence = 0;
+
+/**
+ * Fail a step rather than let it hang forever.
+ *
+ * Every caller here already treats an error as "leave the widget on its last snapshot", but none of
+ * them can recover from a promise that simply never settles: the sync sits pending, the in-app
+ * preview never leaves its loading state, and nothing anywhere says why. A bounded wait turns that
+ * silent limbo into the ordinary failure path, and names the step that stalled.
+ */
+function withTimeout<T>(label: string, ms: number, work: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`widget-sync: ${label} timed out after ${ms}ms`)), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/** Generous enough for a slow connection, short enough that a stalled step doesn't wedge the widget. */
+const STEP_TIMEOUT_MS = 20_000;
 
 /**
  * Download `url` into the App Group under `filename`, downscaled to a size the widget extension can
@@ -58,12 +85,20 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
   // made the download reject with `DestinationAlreadyExists`, which this module then swallowed,
   // leaving the widget silently empty. `idempotent` covers the leftovers of a run that died before
   // its cleanup.
-  const staged = new File(dir, `staging-${stagingSequence++}-${filename}`);
+  // Staging lives in the app's OWN cache, not in the App Group. expo-image-manipulator reads the
+  // staged file, and pointing it at a path inside the shared container is asking it to reach across
+  // a sandbox boundary — which is where the read stopped coming back at all. Only the finished
+  // derivative crosses into the App Group, by a move, which is the one operation that has to.
+  const staged = new File(Paths.cache, `widget-staging-${stagingSequence++}-${filename}`);
   if (staged.exists) staged.delete();
-  await File.downloadFileAsync(url, staged, { idempotent: true });
+  await withTimeout('download', STEP_TIMEOUT_MS, File.downloadFileAsync(url, staged, { idempotent: true }));
 
   try {
-    const source = await ImageManipulator.manipulate(staged.uri).renderAsync();
+    const source = await withTimeout(
+      'measure',
+      STEP_TIMEOUT_MS,
+      ImageManipulator.manipulate(staged.uri).renderAsync(),
+    );
     const { width, height } = source;
     const longEdge = Math.max(width, height);
     const decodedMb = ((width * height * 4) / 1024 / 1024).toFixed(1);
@@ -86,8 +121,12 @@ async function downloadToAppGroup(url: string, filename: string): Promise<string
         ? context.resize({ width: WIDGET_RENDER_MAX_DIMENSION })
         : context.resize({ height: WIDGET_RENDER_MAX_DIMENSION });
 
-    const rendered = await scaled.renderAsync();
-    const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+    const rendered = await withTimeout('resize', STEP_TIMEOUT_MS, scaled.renderAsync());
+    const saved = await withTimeout(
+      'encode',
+      STEP_TIMEOUT_MS,
+      rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG }),
+    );
     if (target.exists) target.delete();
     await new File(saved.uri).move(target);
 
