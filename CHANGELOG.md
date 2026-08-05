@@ -57,8 +57,17 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   self-contradiction that made it impossible to delete any account that had ever sent a photo or
   drawing (Postgres `23502`). Fixed to `on delete cascade` in `0009_media_sender_cascade.sql`,
   applied and confirmed by a delete that now succeeds.
+- **Concurrent syncs collided on a fixed staging filename.** `downloadToAppGroup` staged every
+  download at `staging-<name>`, so two overlapping calls raced and the second threw
+  `DestinationAlreadyExists` (`FileSystemDownload.swift:160`) — swallowed, leaving the widget empty.
+  **Not preview-specific:** `syncWidgetOnOpen` re-runs on every AppState `active`, so two quick
+  foregrounds could already collide; mounting the preview beside `useWidgetSync` just made it happen
+  every launch. Staging names are now per-call, the download is idempotent, and the target is
+  cleared immediately before the move instead of at the top of the function.
 - **Push asked for notification permission before checking for real hardware**, burning the one-shot
-  iOS prompt on a simulator that can never receive a token.
+  iOS prompt on a simulator that can never receive a token. (Note: `Device.isDevice` still appears
+  to report `true` on this simulator, so the prompt persists there — the guard is correct, the
+  signal isn't reliable.)
 - **The preview rendered an indefinite black rectangle** when its load failed, instead of the empty
   state.
 
@@ -69,10 +78,20 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   removed and re-added, so this needs a human with the phone.
 - **The M7 preview renders, but its image content has not been seen.** On the simulator the frame
   appears in the right place at the right medium-widget ratio, and the empty state renders
-  correctly; the seeded photo/drawing never reached the App Group, so a full rotation between two
-  images has *not* been watched. The data path is known-good up to that point (`buildProps` was
-  demonstrably reached — it is what created the directory), so the remaining unknown is the
-  download/manipulate step, possibly specific to the synthetic PNGs used as test media.
+  correctly, but **a rotation between two images has never been watched**.
+
+  How far it got, so nobody repeats the work: the data path is good (a seeded partner's photo and
+  drawing are visible to the receiving user and sign correctly), and `buildProps` is definitely
+  reached — it is what creates the App Group directory. Fixing the staging-file race cleared the
+  exception, after which the load **hangs** instead of throwing, so the image never lands. The
+  remaining suspect is `expo-image-manipulator`, which this project has already seen hang once
+  (see the drawing-send note in CLAUDE.md — a giant data URI stalled it on device). It was *not*
+  the image format: the same thing happens with real 600×600 JPEGs as with PNGs.
+
+  Worth knowing: the simulator is a usable harness for this after all — sessions can be injected at
+  `Library/Application Support/<bundle-id>/RCTAsyncLocalStorage_V1` (**not** `Documents/`, which is
+  where older RN AsyncStorage kept it), and a swallowed error can be surfaced by temporarily
+  rendering it into the preview's own props.
 
 ### Rejected, with evidence
 - **The Live Activity branch of spec 3.4** was not built. Not for the expected reason: Apple's rate
