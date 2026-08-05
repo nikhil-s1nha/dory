@@ -94,12 +94,22 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   got a 20s ceiling; and the preview's loading state was fixed so an unpaired/not-yet-loaded profile
   resolves to the empty state instead of an indefinite blank frame.
 
-  **No timeout ever fires and no error is ever surfaced**, which is not consistent with any code
-  path in this module — by the end, edits that should certainly have rendered text produced no
-  change at all. The most likely explanation is that Metro was serving a stale bundle for the last
-  several cycles, i.e. the later observations say nothing about the code. Anyone resuming this
-  should start from a clean `expo start --clear` and re-confirm the bundle is live (change a
-  visible string) *before* drawing conclusions from what the preview shows.
+  **No timeout ever fires and no error is ever surfaced.** A stale Metro bundle was suspected and
+  then **ruled out**: with `expo start --clear` and a visible marker string on the home screen, the
+  marker rendered, so the app was demonstrably running the current code while the preview still
+  showed a bare frame.
+
+  That leaves genuinely contradictory evidence, which is where this stops rather than guessing
+  further. Every `await` in the load path is now bounded (both Supabase reads, the signed-URL calls,
+  download, measure, resize, encode), so the load can neither hang nor fail silently — yet it
+  produces no content, no empty state and no error, and nothing is ever written into the App Group.
+  If the effect never ran, the derived empty state would render its text; if it ran, it must resolve
+  or throw. Both are excluded by observation.
+
+  The next person should get real logs rather than infer from pixels — attach a debugger or
+  `xcrun simctl spawn <device> log stream --predicate 'process == "Bundles"'` — and check first
+  whether `useWidgetPreview`'s effect body is entered at all. Every fix listed above is sound and
+  worth keeping regardless of what that turns up.
 
   Worth knowing: the simulator is a usable harness for this after all — sessions can be injected at
   `Library/Application Support/<bundle-id>/RCTAsyncLocalStorage_V1` (**not** `Documents/`, which is

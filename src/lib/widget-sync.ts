@@ -195,12 +195,20 @@ export async function buildProps(
   ctx: StackContext,
 ): Promise<BundlesWidgetProps> {
   if (item === 'photo' && ctx.latestPhoto) {
-    const url = await getSignedUrl(supabase, ctx.latestPhoto.storagePath);
+    const url = await withTimeout(
+      'signPhoto',
+      STEP_TIMEOUT_MS,
+      getSignedUrl(supabase, ctx.latestPhoto.storagePath),
+    );
     const file = await downloadToAppGroup(url, `photo-${ctx.latestPhoto.id}.jpg`);
     return { kind: 'photo', imageFile: file, deepLink: `bundles://media/${ctx.latestPhoto.id}` };
   }
   if (item === 'drawing' && ctx.latestDrawing) {
-    const url = await getSignedUrl(supabase, ctx.latestDrawing.storagePath);
+    const url = await withTimeout(
+      'signDrawing',
+      STEP_TIMEOUT_MS,
+      getSignedUrl(supabase, ctx.latestDrawing.storagePath),
+    );
     const file = await downloadToAppGroup(url, `drawing-${ctx.latestDrawing.id}.jpg`);
     // Tapping a drawing opens the canvas pre-loaded, ready to draw back (spec 3.2).
     return { kind: 'drawing', imageFile: file, deepLink: `bundles://draw?base=${ctx.latestDrawing.id}` };
