@@ -88,10 +88,16 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
   (see the drawing-send note in CLAUDE.md — a giant data URI stalled it on device). It was *not*
   the image format: the same thing happens with real 600×600 JPEGs as with PNGs.
 
+  Two further attempts, both now in the code as improvements but neither the cure: staging was moved
+  out of the App Group into the app's own cache (so `expo-image-manipulator` isn't reading across a
+  sandbox boundary), and every step of `downloadToAppGroup` got a 20s ceiling. **No timeout ever
+  fires**, which localises the stall *upstream* of `downloadToAppGroup` — in `loadStackSnapshot`'s
+  Supabase reads, which are still unbounded. That is the next thing to instrument.
+
   Worth knowing: the simulator is a usable harness for this after all — sessions can be injected at
   `Library/Application Support/<bundle-id>/RCTAsyncLocalStorage_V1` (**not** `Documents/`, which is
   where older RN AsyncStorage kept it), and a swallowed error can be surfaced by temporarily
-  rendering it into the preview's own props.
+  rendering it into the preview's own props. That trick is what caught the staging-file race.
 
 ### Rejected, with evidence
 - **The Live Activity branch of spec 3.4** was not built. Not for the expected reason: Apple's rate
