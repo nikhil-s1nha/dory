@@ -37,6 +37,13 @@ let lastImageDebug: string | undefined;
  */
 async function downloadToAppGroup(url: string, filename: string): Promise<string> {
   const dir = new Directory(widgetsDirectory);
+  // The App Group container exists from the entitlement, but this subdirectory does not until
+  // something writes it — and downloading into a missing directory throws. That makes the very
+  // first sync after a fresh install fail silently, leaving the widget (and the in-app preview)
+  // empty until some later run happens to find the directory already there. Idempotent, so this is
+  // a no-op on every subsequent call.
+  dir.create({ intermediates: true, idempotent: true });
+
   const target = new File(dir, filename);
   if (target.exists) target.delete();
 

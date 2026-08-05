@@ -55,7 +55,10 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
         cursor.current = first.cursor;
         setProps(first.item ? (Object.fromEntries(built)[first.item] ?? null) : { kind: 'empty' });
       } catch {
-        /* leave whatever the preview last showed; the widget itself is unaffected */
+        // Keep whatever the preview was already showing — a failed refresh shouldn't blank content
+        // that's still perfectly good. But if we've never shown anything, fall back to the empty
+        // state rather than leaving an indefinite blank rectangle that reads as a broken render.
+        if (!cancelled) setProps((prev) => prev ?? { kind: 'empty' });
       } finally {
         if (!cancelled) setIsLoading(false);
       }

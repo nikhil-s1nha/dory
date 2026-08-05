@@ -132,6 +132,10 @@ export async function registerForPushNotifications(
   userId: string,
 ): Promise<DevicePushRegistration | null> {
   try {
+    // Check the hardware before prompting. iOS never completes APNs registration on a simulator, so
+    // asking there burns the one-shot permission dialog on a capability that cannot work — and the
+    // prompt sits over the UI for the rest of the session.
+    if (!Device.isDevice) return null;
     if (!(await ensureNotificationPermission())) return null;
     const registration = await getDevicePushRegistration();
     if (!registration) return null;
