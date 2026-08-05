@@ -81,11 +81,29 @@ Verified with a seeded test couple (created, exercised through RLS, and deleted 
 - **The preview rendered an indefinite black rectangle** when its load failed, instead of the empty
   state.
 
-### Not verified — do not read this as delivered
-- **No notification has been observed arriving on a phone.** The build on the device predates the
-  registration code, so end-to-end push is unproven.
-- **No one has tapped the widget yet.** A placed widget holds stale extension state until it is
-  removed and re-added, so this needs a human with the phone.
+### Verified on the physical device (2026-08-05)
+Driven from `tools/widget-shot/` — no human thumb involved.
+- ✅ **Push, end to end.** Simulated the partner sending a photo (admin-generated session, real
+  upload, real `media_items` row), invoked `notify-partner` as them → `{"sent":1,"failed":0}` → the
+  phone shows **"Alex — sent you a photo"** in Notification Center. The APNs JWT, the sandbox
+  gateway choice and the visible-alert payload are all confirmed against real APNs.
+- ✅ **Token registration on hardware.** `push_tokens` holds a 64-char APNs token for the signed-in
+  user with `environment: sandbox` — which is the entitlement-based detection getting it right. A
+  `__DEV__` check would have written `production` here and delivery would have failed.
+- ✅ **The widget tap.** `bundles://draw?base=<id>` opens the canvas **with the partner's drawing
+  preloaded**, ready to draw back — the spec 3.2 round-trip, working for the first time.
+  `bundles://music` opens the music screen. This required a real fix; see below.
+- ✅ **The widget renders what the app delivered.** Props said `kind: music, title: "Yellow"`, and
+  the home screen showed album art + "Yellow" + "Coldplay" + "Alex is listening to …". Advancing the
+  stack (drawing → music) changed both together, so render tracks props.
+
+### Fixed here, found only on the device
+- 🔴 **Deep links were dropped on cold start.** The feature screens sit behind
+  `Stack.Protected guard={paired}`, and `paired` is false until the session and profile load — so a
+  widget tap resolved its URL against a navigator that had no `/draw`, `/media/[id]` or `/music`
+  yet. The route was discarded and the app landed on the tab home. Not a URL-format problem: both
+  the two- and three-slash spellings failed identically. The launch URL is now replayed once the
+  app can show it (`src/hooks/use-deep-link-replay.ts`).
 - ✅ **M7 rotation is verified on the simulator.** With a seeded partner's photo and drawing, the
   preview showed the photo, then the drawing 15 seconds later, in priority order. Screenshots taken
   17s apart.

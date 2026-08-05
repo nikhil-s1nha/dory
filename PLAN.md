@@ -52,12 +52,12 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M0 | Scaffolding, CI, architecture decision | ✅ **complete** — lint/typecheck/test green; app builds, boots, and renders on the iOS simulator |
 | M1 | Accounts, partner pairing, backend skeleton | ✅ **complete** — live RLS verified on cloud Supabase; auth + pairing screens render and gate correctly on the simulator; 46 tests. One flag: email confirmation blocks real sign-ups (see CHANGELOG) |
 | M2 | Home screen, tab bar, Shitlist | ✅ **complete** — home grid + Instagram-style tab bar + shared Shitlist (Apple Notes UX, realtime); RLS verified; rendered on simulator against live data; 64 tests |
-| M3 | Photo → widget | 🟡 **built end-to-end; final device confirmation outstanding** — Phase A (media backend + Storage RLS verified live, send/upload end-to-end, capture + full-view) plus Phase B's App Group write and photo widget, verified on device by screenshot. Push dispatch and the tap deep-link are now **built, gate-green and deployed** (migration applied, `notify-partner` live, RLS verified by `BUNDLES_PUSH_RLS_OK`); neither has yet been *observed* working on the phone |
-| M4 | Drawing canvas + round-trip | 🟡 **built end-to-end; final device confirmation outstanding** — Phase A (Skia canvas + tools, tested stroke model, send via media pipeline, round-trip preload) plus the drawing widget rendering on device. The `bundles://draw?base=<id>` round-trip entry point is now live in the widget tree via `widgetURL`, but the tap itself is unconfirmed on device |
+| M3 | Photo → widget | ✅ **complete** — media backend + Storage RLS verified live, send/upload end-to-end, capture + full-view, App Group write and photo widget on device. Push dispatch is deployed and **observed end-to-end on the phone**: the partner sends, `notify-partner` reaches APNs, and "Alex sent you a photo" appears in Notification Center. RLS verified by `BUNDLES_PUSH_RLS_OK` |
+| M4 | Drawing canvas + round-trip | ✅ **complete** — Skia canvas + tools, tested stroke model, send via media pipeline, and the round-trip **confirmed on device**: `bundles://draw?base=<id>` opens the canvas with the partner's drawing preloaded, ready to draw back (spec 3.2). Required fixing a cold-start deep-link drop; see CHANGELOG |
 | M5 | Smart-stack priority & advancement | ✅ **complete** — pure selection/advancement (priority photo>drawing>music, per-open cycling), 15 tests; cursor persistence, per-open delivery, and on-screen rendering of photo, drawing and music all **verified on device** by screenshot. The frozen-widget bug was decoded-bitmap size in the extension — fixed in `c186227`, see [WIDGET-FREEZE.md](./WIDGET-FREEZE.md) |
 | M6 | Spotify OAuth + now-playing | ✅ **complete** — verified live end-to-end 2026-07-24: owner registered the redirect URI, real OAuth round-trip, 2-min cron poller tracked a real song change, and the partner sees album art + "Alex is listening to …" with tokens still owner-only. Now-playing also **renders on the widget on device** (M5). Minor: a dev-only "view warnings" toast on the Music screen |
 | M7 | Stretch: 15s rotation | ✅ **complete** — built as spec 3.4's in-app preview and **verified on the simulator**: photo, then drawing 15s later, in priority order. The Live Activity branch is not achievable; see [the M7 note](#m7--why-the-live-activity-branch-was-not-built) for the evidence. 23 new tests |
-| M8 | Polish + full-flow pass | 🟡 **in progress** — docs reconciled; a full flow pass on device is the remaining work |
+| M8 | Polish + full-flow pass | ✅ **complete** — docs reconciled, and the full flow exercised on the physical device: partner sends → push arrives → widget renders it → tapping it opens the item. Ten defects found and fixed along the way, most of them in already-"shipped" code (see CHANGELOG) |
 
 Ordering note: Spotify (spec M5) and smart stack (spec M6) are swapped per the deprioritization.
 
@@ -93,11 +93,10 @@ cleared and **most of Phase B shipped under the M5 device-verification push** (`
 2. **Widget tap deep-link — applied.** `widgetURL` now sits on the root of each rendering branch
    (SwiftUI honours exactly one per hierarchy), so the spec 3.2 round-trip entry point is reachable.
 
-**What is still unproven:** neither has been *observed* on the phone. The build that verified the
-deep-link change is installed, but the widget must be removed and re-added before a tap means
-anything, and the push path additionally needs a build carrying the registration code. Written and
-gate-green is not the same as delivered, and this list should not be marked ✅ until someone has
-watched a notification arrive and a widget tap land.
+**Both are now observed on the phone (2026-08-05)** — a notification arriving, and a widget tap
+landing on the preloaded canvas. See the CHANGELOG's device-verification section. Getting there took
+a further fix apiece: the App Group delete bug for the widget, and a cold-start deep-link drop for
+the tap. Neither was visible from reading the code, and neither would have been caught by tests.
 
 ## M7 — why the Live Activity branch was not built
 
