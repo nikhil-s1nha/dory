@@ -9,6 +9,34 @@ Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md]
 - `npm run ios` — simulator build. `npx expo prebuild` first if you added a native module or config plugin; JS-only changes need nothing but a Metro reload.
 - `npx expo run:ios --device <udid> --configuration Release` — device build. First run on a *new* device fails signing; see `.claude/skills/ios-device-build/`.
 
+## Verifying on the device — use `tools/widget-shot/`, don't ask the user to look
+
+**Reach for this before asking a human to check a phone.** It drives the physical device and returns
+screenshots, so "does the widget actually show X" and "does tapping it open Y" are questions you can
+answer yourself. It is the only way to see the widget, Notification Center, or a deep link's
+destination — `devicectl` has no screenshot command, and `idevicescreenshot` is refused on iOS 17+.
+
+```sh
+cd tools/widget-shot && xcodegen generate   # .xcodeproj is gitignored — regenerate in a fresh clone
+./shoot.sh              # photograph every home-screen page + print the props the app delivered
+./shoot.sh open         # open Bundles first (advances the smart stack), then photograph
+python3 pick_widget_page.py RUN_DIR         # the page the widget is on
+python3 contact_sheet.py OUT.png "L=RUN_DIR"  # crop+tile many runs into one image
+```
+
+Two more captures, run via `xcodebuild test -only-testing:WidgetShotUITests/WidgetShotUITests/<test>`:
+
+- `testOpenDeepLink` — opens a `bundles://` URL the way a widget tap does, then screenshots where it
+  landed. Pass the URL as **`TEST_RUNNER_WIDGET_SHOT_URL`**: a plain shell variable never reaches a
+  process running on the device, and the test then silently falls back to its default and verifies
+  the *wrong* link (this looked exactly like "draw opens Music").
+- `testCaptureNotificationCenter` — proves a push arrived. A banner is gone in ~5s, far less than a
+  UI test takes to start, so Notification Center is the only surface worth photographing after the fact.
+
+`shoot.sh` also copies the App Group plist and prints the props alongside the picture. **A mismatch
+between the two is the bug**: props say one thing, the screen shows another. Matching props and
+pixels is what "verified" means here.
+
 ## Commits
 
 - One commit per verified unit of work, with lint/typecheck/test green — never a whole milestone in one, never a red gate.
@@ -51,7 +79,9 @@ Product spec: [SPEC.md](./SPEC.md). Status: [PLAN.md](./PLAN.md), [CHANGELOG.md]
 
 - Reproduce the user's literal interaction before declaring a UI bug fixed — a "same render path" proxy is not proof (the CoreGraphics NaN bug was declared fixed twice while still broken).
 - After ~3 failed attempts at flaky simulator UI automation, web-search for a known platform bug instead of iterating.
-- Verify on the simulator yourself before asking the user to test on their phone.
+- Verify it yourself before asking the user to look at their phone — simulator for the data pipeline,
+  `tools/widget-shot/` for anything on the device (widget render, deep-link destination, push arrival).
+  Asking a human to check something the harness can screenshot is the slow path, not the safe one.
 - Ask for credentials **all at once**, with click-paths; flag cost/account prerequisites (Apple Program, Spotify Premium) and macOS Privacy & Security toggles *before* a step needs them.
 - Don't suppress `react-hooks/set-state-in-effect` — restructure to `const run = async () => {…}; run();` / `void fn()`.
 - Never guess an Expo API surface. Read the installed `.d.ts` or the versioned docs (`docs.expo.dev/versions/v57.0.0/`) first — `@expo/ui/swift-ui`, `expo-file-system`, and `expo-image-manipulator` all bit us.

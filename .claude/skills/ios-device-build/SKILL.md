@@ -225,9 +225,14 @@ Only after the app process is confirmed do you report success — and say what y
 confirm it, say that plainly instead of implying the deploy worked.
 
 One thing the process check can't see: what's on the screen. When the change being verified is
-visual — a widget render, a screen fix — the process check proves delivery, not correctness. Ask the
-user what the phone shows and interpret their answer; don't treat a running process as evidence the
-UI is right.
+visual — a widget render, a screen fix — the process check proves delivery, not correctness. Don't
+treat a running process as evidence the UI is right.
+
+**Photograph it yourself with `tools/widget-shot/` rather than asking the user** (see the CLAUDE.md
+section): `./shoot.sh` walks the home-screen pages and prints the props the app delivered alongside
+the picture, `testOpenDeepLink` shows where a `bundles://` URL actually lands, and
+`testCaptureNotificationCenter` shows whether a push arrived. Fall back to asking a human only for
+things the harness genuinely can't reach — physically tapping a widget, or the camera.
 
 ## 6. Failure decoder
 
