@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { describePairingError, isUniqueViolation } from '@/domain/pairing/errors';
 import { normalizeCode } from '@/domain/pairing/invite-code';
 import {
   createCoupleWithInvite,
@@ -35,6 +36,15 @@ const REDEEM_MESSAGES: Record<Exclude<RedeemOutcome, { ok: true }>['reason'], st
   NOT_AUTHENTICATED: 'Please sign in again.',
   UNKNOWN: 'Something went wrong. Try again.',
 };
+
+/** Best-effort second look for an invite we already own. Its own failure isn't worth reporting. */
+async function recoverOutstanding(uid: string): Promise<OutstandingInvite | null> {
+  try {
+    return await findOutstandingInvite(supabase, uid);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Shown to signed-in users who aren't paired yet. Two ways forward: mint an invite for your
@@ -63,7 +73,7 @@ export default function PairScreen() {
         const found = await findOutstandingInvite(supabase, userId);
         if (active) setOutstanding(found);
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : 'Could not load your invite.');
+        if (active) setError(describePairingError(e, 'Could not load your invite.'));
       } finally {
         if (active) setLoading(false);
       }
@@ -82,7 +92,18 @@ export default function PairScreen() {
       const { invite, coupleId } = await createCoupleWithInvite(supabase, userId, Date.now());
       setOutstanding({ coupleId, code: invite.code, expiresAt: invite.expiresAt });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create an invite.');
+      // A member_a unique violation means this account already owns a couple — the invite exists,
+      // we just failed to see it on mount (the same failed read that can land a user here in the
+      // first place). Recover it silently; showing an error for a code we already have is absurd.
+      if (isUniqueViolation(e)) {
+        const recovered = await recoverOutstanding(userId);
+        if (recovered) {
+          setOutstanding(recovered);
+          setBusy(false);
+          return;
+        }
+      }
+      setError(describePairingError(e, 'Could not create an invite.'));
     } finally {
       setBusy(false);
     }
@@ -100,7 +121,7 @@ export default function PairScreen() {
       }
       setError(REDEEM_MESSAGES[outcome.reason]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not redeem that code.');
+      setError(describePairingError(e, 'Could not redeem that code.'));
     } finally {
       setBusy(false);
     }
@@ -184,13 +205,15 @@ export default function PairScreen() {
                 )}
               </Pressable>
             </View>
-
-            {error && (
-              <ThemedText type="small" style={styles.error}>
-                {error}
-              </ThemedText>
-            )}
           </>
+        )}
+
+        {/* Outside the loading branch: a sign-out failure has to be visible too, and the sign-out
+            button is the one control that's live at every point on this screen. */}
+        {error && (
+          <ThemedText type="small" style={styles.error}>
+            {error}
+          </ThemedText>
         )}
 
         <Pressable onPress={() => signOut()} hitSlop={8} style={styles.signOut}>
