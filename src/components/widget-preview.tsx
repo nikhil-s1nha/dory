@@ -10,7 +10,7 @@ import {
   resizable,
 } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { parseWidgetDeepLink } from '@/domain/widget/deep-link';
 import { useWidgetPreview } from '@/hooks/use-widget-preview';
@@ -33,7 +33,20 @@ export function WidgetPreview() {
   const router = useRouter();
   const { props, isLoading } = useWidgetPreview();
 
-  if (isLoading || !props) return <View style={styles.frame} />;
+  // `useWidgetPreview` chains up to three network steps, each with a 20s timeout, so this window
+  // is tens of seconds wide on a bad connection. An empty frame for that long is pixel-identical
+  // to the "indefinite black rectangle" failure this screen was already fixed for once — the
+  // spinner is what distinguishes "still working" from "broken".
+  if (isLoading || !props) {
+    return (
+      <View
+        style={[styles.frame, styles.loading]}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Loading your widget">
+        <ActivityIndicator color={LOADING_TINT} />
+      </View>
+    );
+  }
 
   const route = parseWidgetDeepLink(props.deepLink);
 
@@ -114,6 +127,9 @@ function PreviewContent(props: BundlesWidgetProps) {
   );
 }
 
+/** The muted grey the widget itself uses for secondary text — the frame is always dark. */
+const LOADING_TINT = '#AEAEB2';
+
 const styles = StyleSheet.create({
   // A systemMedium widget is 338×158pt on most phones; matching that ratio is what makes this read
   // as "your widget" rather than as a card that happens to hold a photo.
@@ -124,4 +140,5 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#000000',
   },
+  loading: { alignItems: 'center', justifyContent: 'center' },
 });
