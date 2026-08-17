@@ -56,7 +56,9 @@ affected — widgets/Live Activities stability carries forward from 56.
 | M4 | Drawing canvas + round-trip | ✅ **complete** — Skia canvas + tools, tested stroke model, send via media pipeline, and the round-trip **confirmed on device**: `bundles://draw?base=<id>` opens the canvas with the partner's drawing preloaded, ready to draw back (spec 3.2). Required fixing a cold-start deep-link drop; see CHANGELOG |
 | M5 | Smart-stack priority & advancement | ✅ **complete** — pure selection/advancement (priority photo>drawing>music, per-open cycling), 15 tests; cursor persistence, per-open delivery, and on-screen rendering of photo, drawing and music all **verified on device** by screenshot. The frozen-widget bug was decoded-bitmap size in the extension — fixed in `c186227`, see [WIDGET-FREEZE.md](./WIDGET-FREEZE.md) |
 | M6 | Spotify OAuth + now-playing | ✅ **complete** — verified live end-to-end 2026-07-24: owner registered the redirect URI, real OAuth round-trip, 2-min cron poller tracked a real song change, and the partner sees album art + "Alex is listening to …" with tokens still owner-only. Now-playing also **renders on the widget on device** (M5). Minor: a dev-only "view warnings" toast on the Music screen |
-| M7 | Stretch: 15s rotation | ✅ **complete** — built as spec 3.4's in-app preview and **verified on the simulator**: photo, then drawing 15s later, in priority order. The Live Activity branch is not achievable; see [the M7 note](#m7--why-the-live-activity-branch-was-not-built) for the evidence. 23 new tests |
+| M7 | Stretch: 15s rotation | ✅ **complete** — built as spec 3.4's in-app preview and **verified on the simulator**: photo, then drawing 15s later, in priority order. 23 new tests. The *rotation* still can't live on the lock screen (reasoning in [the M7 note](#m7--why-the-live-activity-branch-was-not-built)), but the note's wider "Live Activities aren't achievable" conclusion was wrong — see [M9](#m9--live-activities-built-2026-08-16) |
+| M9 | Live Activities (push-to-start) | 🟡 **built; delivery verified, render not yet** — push-to-start token registered on device, a real start push **accepted by APNs** (`sent:1`), dual per-environment APNs keys, lock-screen + Dynamic Island layouts, deep-link patch so a tap opens the item. On-screen rendering is unconfirmed pending `Enable UI Automation` on the phone |
+| M10 | TestFlight distribution | 🟡 **pipeline built and prebuild-verified; not yet uploaded** — ASC API client (auth verified live), archive/export/upload script, signing + privacy-manifest config plugins proven through a real prebuild and device build. Blocked on the App Store record, which Apple's API cannot create |
 | M8 | Polish + full-flow pass | ✅ **complete** — docs reconciled, and the full flow exercised on the physical device: partner sends → push arrives → widget renders it → tapping it opens the item. Ten defects found and fixed along the way, most of them in already-"shipped" code (see CHANGELOG) |
 
 Ordering note: Spotify (spec M5) and smart stack (spec M6) are swapped per the deprioritization.
@@ -97,6 +99,43 @@ cleared and **most of Phase B shipped under the M5 device-verification push** (`
 landing on the preloaded canvas. See the CHANGELOG's device-verification section. Getting there took
 a further fix apiece: the App Group delete bug for the widget, and a cold-start deep-link drop for
 the tap. Neither was visible from reading the code, and neither would have been caught by tests.
+
+## M9 — Live Activities, built (2026-08-16)
+
+The section below this one is the earlier decision to skip Live Activities. It is kept verbatim
+rather than deleted, because most of its reasoning was right and the one thing it got wrong is worth
+seeing. **Its conclusion is now superseded.**
+
+What it got right: a **15-second local rotation** on the lock screen really isn't achievable. The
+foreground is the only place a local timer runs, and that is exactly where the surface isn't shown.
+Driving the rotation by push would need ~240 pushes/hour against a budgeted channel. That analysis
+holds and the in-app preview remains the right home for spec 3.4's rotation.
+
+What it got wrong: it generalised from "the rotation mechanism doesn't work" to "don't build Live
+Activities", and never evaluated the capability that actually matters here — **push-to-start**
+(iOS 17.2+), where the server starts the activity on a locked phone with the app not running. That
+is a different mechanism from the foreground-only `Activity.request()` it assessed, and it is what
+makes "your partner sends a photo and it's on your lock screen" possible at all.
+
+### Verified against real APNs and real hardware
+- The phone registers a **push-to-start token** on launch, with `environment: sandbox` derived from
+  the `aps-environment` entitlement (not `__DEV__`, which would report the opposite for a Release
+  build installed by Xcode and every TestFlight build).
+- A real start push for that token returned **`{"event":"start","sent":1,"failed":0}`**. Because APNs
+  validates the device token *before* the topic, push type and body (established by a controlled
+  probe — see CHANGELOG), a 200 for a *real* token is the only thing that confirms the rest of the
+  envelope: the `liveactivity` push type, the `…push-type.liveactivity` topic, `attributes-type:
+  LiveActivityAttributes`, `attributes: {}`, and the JSON-stringified `content-state`. All five were
+  derived by reading expo-widgets' Swift rather than from documentation.
+- **Two APNs keys**, one sandbox-only and one production-only, selected per request from the token
+  row's `environment` alongside the gateway, with a per-key JWT cache.
+
+### ⏳ Not yet confirmed
+On-screen rendering. APNs accepting a push proves delivery, not that ActivityKit decoded it and drew
+something. `tools/widget-shot/`'s `testLiveActivityVisibility` photographs the Dynamic Island across
+foreground/background/update/end to settle it, and is written and committed — but it needs
+**Settings → Developer → Enable UI Automation** on the device, which was off. Until those pictures
+exist, treat the layouts as unproven.
 
 ## M7 — why the Live Activity branch was not built
 

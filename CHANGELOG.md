@@ -2,6 +2,75 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Live Activities + TestFlight infrastructure (2026-08-16)
+
+Built by four parallel agents in separate git worktrees, integrated through one serialised device
+lane (one iPhone, one Xcode — that cannot be parallelised). Trunk went from 151 tests to 267.
+
+### Built
+- **Live Activities, push-to-start** — `widgets/bundles-activity.tsx` (lock screen + Dynamic Island
+  compact/minimal/expanded), `src/domain/activity/*`, `src/hooks/use-live-activity.ts`,
+  `supabase/migrations/0010_live_activity_tokens.sql`, `supabase/functions/notify-activity/`.
+  Contract pinned up front in `docs/live-activity-contract.md`.
+- **TestFlight pipeline** — `scripts/asc.mjs` (zero-dep App Store Connect client),
+  `scripts/release-testflight.sh`, `plugins/with-signing-and-versioning.js`,
+  `plugins/with-widget-privacy-manifest.js`, `.claude/skills/testflight-release/`.
+- **Defect sweep** — auth resilience, widget cursor ordering, Shitlist optimistic reverts, camera
+  error handling, preview loading state, CI triggers.
+
+### Verified
+- **On real hardware:** push-to-start token registered with `environment: sandbox` from the
+  entitlement; a real start push returned `{"event":"start","sent":1,"failed":0}` from APNs.
+- **Live on the cloud DB:** `BUNDLES_ACTIVITY_RLS_OK` — owner-only, partner reads nothing, device
+  handover reassigns.
+- **CI green on real code for the first time** (run 31997502502, 1m11s). The workflow triggered only
+  on `main` — an empty root commit — so every prior "CI green" claim was local-only.
+- `expo prebuild` + a full Release device build with both config plugins.
+
+### Found by doing, not by reading
+- 🔴 **Both APNs keys are environment-restricted, in opposite directions.** The existing key returns
+  `403 BadEnvironmentKeyInToken` on production; a replacement returns the same on *sandbox*. Neither
+  is universal, and Apple caps an account at two. **TestFlight would have shipped with all push
+  silently dead** — including the already-working alert path, which had never hit it because every
+  install to date is a sandbox build. Fixed by holding both keys and selecting per request from the
+  token row's `environment`, with a per-key JWT cache (a single cache slot would have crossed the
+  keys after the first 50-minute window).
+- 🔴 **APNs validates the device token BEFORE the topic, push type and body.** A controlled probe —
+  payload stripped, 5,212-byte payload, foreign topic, wrong push type — returned an identical
+  `400 BadDeviceToken` in all four cases. This *falsified an earlier claim in this session* that a
+  `BadDeviceToken` response proved the envelope was accepted. It proved only the provider JWT. The
+  envelope stayed unproven until a real device token returned 200.
+- **`.widgetURL()` was applied only inside expo-widgets' `dynamicIsland:` closure**, so a
+  lock-screen tap had no link at all, `update()` couldn't change it, and a push-started activity
+  never got one. Patched to derive the URL from the content state's `deepLink`, which fixes all
+  three at once. `patches/expo-widgets+57.0.6.patch`, 31 → 91 lines.
+- **The widget extension's privacy manifest resolved to a doubled path.** `ExpoWidgetsTarget`'s
+  PBXGroup carries a `path`, the app's `Bundles` group does not — so copying the app target's
+  shape yields `ExpoWidgetsTarget/ExpoWidgetsTarget/PrivacyInfo.xcprivacy` and the build dies.
+  Only a real compile catches this.
+- **`expo-application` was declared in `package.json` but absent from the lockfile**, which makes
+  `npm ci` fail. Invisible until CI actually ran — which it never had.
+- **A widget-cursor bug of the same class the CHANGELOG already documents three times**: the cursor
+  was persisted *before* the snapshot was built, so a failed download advanced past an item that was
+  never rendered, silently. Now committed only after the snapshot lands. Proven by restoring the old
+  ordering and watching the new tests fail.
+- Cross-lane copy drift: the server's push-started frame said "drew you something" while the app's
+  local update said "sent you a drawing" — a one-word flicker on every drawing.
+
+### Two self-inflicted, recorded because they cost time
+- Creating the worktrees *inside* the repo made jest discover all five checkouts (755 tests instead
+  of 151). Fixed with ignore patterns — and the first fix was itself wrong: unanchored patterns match
+  absolute paths, so a run started *inside* a worktree matched its own rootDir and reported "No files
+  found", making every lane's gate **silently vacuous**. Now anchored to `<rootDir>`.
+- A monitor written as "wait until count != 0" exited on a transient curl failure returning `null`,
+  which read as a result. It wasn't.
+
+### Still open
+- **On-screen rendering of the Live Activity is unconfirmed.** `testLiveActivityVisibility` is
+  written and committed; it needs `Settings → Developer → Enable UI Automation` on the device.
+- **TestFlight upload** is blocked on the App Store Connect app record, which `POST /v1/apps` refuses
+  by design (read/update only — a permanent API limitation, not a permissions problem).
+
 ## Push dispatch, widget tap, and the M7 stretch goal
 
 **Built 2026-08-04.** Closes the two pieces the Phase B entry below lists as "Not built", and
