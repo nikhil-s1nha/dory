@@ -93,8 +93,23 @@ function die(message) {
 // Credentials
 // ---------------------------------------------------------------------------
 
+function assertIssuerShape(issuer, source) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(issuer)) {
+    die(
+      `${source} does not look like an issuer id: ${JSON.stringify(issuer)}\n` +
+        `Expected a UUID, e.g. 57246542-96fe-1a63-e053-0824d011072a.\n` +
+        `The usual mix-up is passing the *Key ID* (${KEY_ID}) as the issuer. They are\n` +
+        `different things: the key id names one key, the issuer id names the whole team.\n` +
+        `Apple answers that mistake with a bare 401, which reads like a broken key.`
+    );
+  }
+  return issuer;
+}
+
 function readIssuerId() {
-  if (process.env.ASC_ISSUER_ID) return process.env.ASC_ISSUER_ID.trim();
+  if (process.env.ASC_ISSUER_ID) {
+    return assertIssuerShape(process.env.ASC_ISSUER_ID.trim(), 'ASC_ISSUER_ID');
+  }
   if (!existsSync(ISSUER_PATH)) {
     die(
       `No issuer id.\n` +
@@ -108,14 +123,7 @@ function readIssuerId() {
   }
   const issuer = readFileSync(ISSUER_PATH, 'utf8').trim();
   if (!issuer) die(`${ISSUER_PATH} is empty. It should contain just the issuer UUID.`);
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(issuer)) {
-    die(
-      `${ISSUER_PATH} does not look like an issuer id: ${JSON.stringify(issuer)}\n` +
-        `Expected a lowercase UUID, e.g. 57246542-96fe-1a63-e053-0824d011072a.\n` +
-        `A common mix-up: that file holding the *Key ID* (${KEY_ID}) instead of the issuer UUID.`
-    );
-  }
-  return issuer;
+  return assertIssuerShape(issuer, ISSUER_PATH);
 }
 
 function loadPrivateKey() {
@@ -232,12 +240,16 @@ function explainStatus(status, errors) {
 
 async function request(method, path, body) {
   const url = path.startsWith('http') ? path : `${API}${path}`;
+  // Minted outside the try: a missing issuer id or an unreadable key is a configuration
+  // error with its own explanation, and wrapping it in "Network error" buries the real
+  // message under a misleading one.
+  const bearer = token();
   let res;
   try {
     res = await fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${token()}`,
+        Authorization: `Bearer ${bearer}`,
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
@@ -520,6 +532,24 @@ commands.builds = {
         `${marketing} (${at.version})  ${at.processingState}${at.expired ? ' EXPIRED' : ''}${compliance}  ${at.uploadedDate}  id=${b.id}`
       );
     }
+  },
+};
+
+commands['next-build-number'] = {
+  summary: 'Print one more than the highest build number App Store Connect has seen.',
+  async run() {
+    const app = await findApp();
+    const { items } = await getAll(
+      `/v1/builds?filter[app]=${app.id}&fields[builds]=version&limit=200`
+    );
+    // App Store Connect rejects a re-used CFBundleVersion outright, and it does so at the
+    // very end of an upload. Asking it what it already has is far cheaper than finding out.
+    const highest = items.reduce((max, b) => {
+      const n = Number.parseInt(b.attributes?.version ?? '', 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    // Bare number on stdout: this is meant to be captured by release-testflight.sh.
+    console.log(String(highest + 1));
   },
 };
 

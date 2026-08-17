@@ -49,6 +49,12 @@ example
 /ios
 /android
 
+# Release artifacts: .xcarchive, exported .ipa, generated ExportOptions.plist
+/build
+
+# App Store Connect issuer id (an identifier, not a secret, but kept local like the team id)
+.asc-issuer-id
+
 # Poller shared secret (never commit)
 .poll-secret
 
