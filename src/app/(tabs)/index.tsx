@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActivityDevControl, SHOW_ACTIVITY_DEV_CONTROL } from '@/components/activity-dev-control';
 import { HomeButton } from '@/components/home-button';
 import { ThemedText } from '@/components/themed-text';
 import { WidgetPreview } from '@/components/widget-preview';
@@ -40,6 +41,12 @@ export default function HomeScreen() {
         <View style={styles.preview}>
           <WidgetPreview />
         </View>
+
+        {SHOW_ACTIVITY_DEV_CONTROL ? (
+          <View style={styles.devControl}>
+            <ActivityDevControl />
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -53,4 +60,5 @@ const styles = StyleSheet.create({
   grid: { gap: Spacing.three },
   row: { flexDirection: 'row', gap: Spacing.three },
   preview: { marginTop: Spacing.five },
+  devControl: { marginTop: Spacing.three },
 });
