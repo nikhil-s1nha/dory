@@ -26,6 +26,7 @@ export default function PhotoScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [captured, setCaptured] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Permission gate — kept minimal; the camera fills the screen once granted.
@@ -49,9 +50,23 @@ export default function PhotoScreen() {
     );
   }
 
+  /**
+   * `takePictureAsync` rejects on a hardware or permission failure, and that rejection used to go
+   * nowhere: an unhandled promise rejection, a shutter that visibly did nothing, and no way to
+   * tell that from a slow capture. Handled like `send()` below — say what happened, stay put.
+   */
   async function capture() {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 1 });
-    if (photo?.uri) setCaptured(photo.uri);
+    setError(null);
+    setCapturing(true);
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 1 });
+      if (photo?.uri) setCaptured(photo.uri);
+      else setError('The camera returned nothing. Try again.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not take that photo. Try again.');
+    } finally {
+      setCapturing(false);
+    }
   }
 
   async function send() {
@@ -117,15 +132,30 @@ export default function PhotoScreen() {
     <View style={styles.black}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
       <SafeAreaView style={styles.shutterBar} edges={['bottom']}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.close}>
-          <ThemedText type="smallBold" style={styles.onDark}>
-            Close
+        {/* A failed capture has to be visible on this screen too — it's where the user still is. */}
+        {error && (
+          <ThemedText type="small" style={styles.captureError}>
+            {error}
           </ThemedText>
-        </Pressable>
-        <Pressable onPress={capture} style={styles.shutterOuter}>
-          <View style={styles.shutterInner} />
-        </Pressable>
-        <View style={styles.close} />
+        )}
+        <View style={styles.shutterRow}>
+          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.close}>
+            <ThemedText type="smallBold" style={styles.onDark}>
+              Close
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              void capture();
+            }}
+            disabled={capturing}
+            accessibilityRole="button"
+            accessibilityLabel="Take photo"
+            style={styles.shutterOuter}>
+            <View style={styles.shutterInner} />
+          </Pressable>
+          <View style={styles.close} />
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -141,12 +171,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.three,
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.four,
   },
+  shutterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  captureError: { color: '#ff6b6b', textAlign: 'center' },
   close: { width: 60 },
   onDark: { color: '#fff' },
   shutterOuter: {
