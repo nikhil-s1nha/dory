@@ -231,14 +231,35 @@ is 401; a malformed body or a non-uuid media id is 400; someone else's media id 
 `kind: "music"` is not reachable from this function — it takes a media id, and now-playing has no
 `media_items` row. Music activities are the app's to start and update locally.
 
-### ⚠️ The APNs auth key is Sandbox-only (found 2026-08-16, against real APNs)
+### Two APNs keys, selected by `environment` (resolved 2026-08-17)
 
-A live probe of `api.push.apple.com` with the project's `.p8` returns **`403
-BadEnvironmentKeyInToken`**. The key is a Development/Sandbox-only APNs key, so **no push of any
-kind — alert or Live Activity — can reach a TestFlight or App Store build** until a universal APNs
-key is issued in the Apple Developer portal and `APNS_KEY_P8`/`APNS_KEY_ID` are replaced. This is
-not specific to Live Activities; `notify-partner` has the same exposure and has simply never hit it,
-because every install so far is a sandbox build.
+**Neither of the project's APNs auth keys is universal.** Measured against real APNs, both
+directions:
+
+| key | sandbox gateway | production gateway |
+|---|---|---|
+| `APNS_KEY_P8` (original) | works | `403 BadEnvironmentKeyInToken` |
+| `APNS_KEY_P8_PRODUCTION` (`8323H4JG5F`) | `403 BadEnvironmentKeyInToken` | works |
+
+So the **key is as environment-specific as the host is**, and both functions now select them
+together. Four secrets: `APNS_KEY_P8`/`APNS_KEY_ID` (sandbox), `APNS_KEY_P8_PRODUCTION`/
+`APNS_KEY_ID_PRODUCTION` (production), plus the shared `APNS_TEAM_ID`.
+
+Three properties worth not breaking:
+
+- **Host and key come from one argument.** `postToApns(environment, …)` derives both; neither is
+  passed in separately, so they cannot drift apart. Pairing them wrongly *is* the 403.
+- **The JWT cache is per environment, not global.** One shared slot would hand the second
+  environment whichever key's JWT was minted first — and only after the 50-minute window turned
+  over, which is a miserable bug to find later.
+- **The cross-gateway retry swaps the key too.** Retrying the other host with the first host's key
+  is a guaranteed 403, which would make the retry decorative. It still may only *improve* an
+  outcome, never override the first verdict.
+
+`notify-partner`'s live behaviour is unchanged: every install today is a sandbox build, so it still
+signs sandbox rows with `APNS_KEY_P8` and still posts to the sandbox host, byte for byte as before.
+What changes is that a production row — which previously failed outright — now works, so **TestFlight
+is no longer dead on arrival.**
 
 Confirmed by a controlled probe (2026-08-16): the same key, token and body sent seconds apart
 returned `403 BadEnvironmentKeyInToken` on production and `400 BadDeviceToken` on sandbox. The same
