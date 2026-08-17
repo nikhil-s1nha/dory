@@ -14,9 +14,11 @@ import { useAuth } from '@/lib/auth-context';
  * control is *not* on screen, and its absence is not a bug in the activity. Either install a Debug
  * build for the experiment, or flip this constant to `true` for the one build that needs it.
  */
-// TEMPORARY (device experiment, not to be committed): forced on so the control is present in a
-// Release build, which is how this project installs to the phone. __DEV__ is false there.
-export const SHOW_ACTIVITY_DEV_CONTROL = true;
+// Never commit this as `true`. Flipping it forces the control into a Release build, which is how
+// this project installs to the phone (__DEV__ is false there) — useful for driving the activity by
+// hand during a device session, and a dev panel shipped to TestFlight testers otherwise. It reached
+// trunk once, in f8cade8, swept up by a `git add -A`.
+export const SHOW_ACTIVITY_DEV_CONTROL = __DEV__;
 
 /**
  * A deliberately ugly debug panel for driving the Live Activity by hand: Start, Update, End.

@@ -88,9 +88,22 @@ const withWidgetPrivacyResource = (config) =>
     }
     const [targetUuid] = entry;
 
+    // A PBXFileReference path is resolved RELATIVE TO ITS GROUP when the group itself carries a
+    // `path`. The two groups here differ, which is the trap:
+    //
+    //   Bundles group:            name = Bundles;           sourceTree = "<group>";   (no path)
+    //   ExpoWidgetsTarget group:  name = ExpoWidgetsTarget; path = ExpoWidgetsTarget;
+    //
+    // So the app target needs `Bundles/PrivacyInfo.xcprivacy` while the extension needs a BARE
+    // `PrivacyInfo.xcprivacy` — prefixing it there yields ExpoWidgetsTarget/ExpoWidgetsTarget/…
+    // and the build dies with "PrivacyInfo.xcprivacy couldn't be opened because there is no such
+    // file". Copying the app target's shape is what produced that. Found by the first real device
+    // compile; nothing short of building catches it.
+    const group = project.pbxGroupByName(TARGET_NAME);
+    const relativePath = group?.path ? MANIFEST_NAME : `${TARGET_NAME}/${MANIFEST_NAME}`;
+
     // A file already linked here means a previous prebuild did this; adding it twice
     // produces a duplicate-resource build failure, which is much worse than doing nothing.
-    const relativePath = `${TARGET_NAME}/${MANIFEST_NAME}`;
     if (project.hasFile(relativePath)) return cfg;
 
     // expo-widgets creates the extension with only Sources / Frameworks / Copy-Pods phases —
