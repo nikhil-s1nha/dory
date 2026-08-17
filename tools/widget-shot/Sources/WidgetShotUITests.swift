@@ -83,6 +83,99 @@ final class WidgetShotUITests: XCTestCase {
     attach(XCUIScreen.main.screenshot(), named: "notification-center")
   }
 
+  /// Settle, with pictures, whether a Live Activity is visible and updatable — and in which app
+  /// states.
+  ///
+  /// PLAN.md rejected the M7 Live Activity branch on an Apple HIG sentence ("appears while your app
+  /// isn't in use") that was never tested on a device, and flagged that ~20-minute check as where to
+  /// start. This is that check.
+  ///
+  /// The Lock Screen is not reachable from XCUITest — a UI test cannot lock the device. But the
+  /// Dynamic Island is just Springboard chrome, so it is in every `XCUIScreen.main.screenshot()`.
+  /// That makes the foreground-vs-background question directly photographable: if the HIG claim
+  /// holds, the island is empty while Bundles is in front and populated the moment it isn't.
+  ///
+  /// Read the attachments in order. `foreground-*` answers "can you see it while using the app",
+  /// `background-*` answers "can you see it otherwise", and `after-update-*` answers the question
+  /// that actually decides whether a 15s rotation is possible: does an update land while the app is
+  /// NOT in the foreground.
+  func testLiveActivityVisibility() throws {
+    let bundles = XCUIApplication(bundleIdentifier: "com.nikhilsinha.bundles")
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+
+    bundles.terminate()
+    Thread.sleep(forTimeInterval: 2)
+    bundles.launch()
+    Thread.sleep(forTimeInterval: 8)   // session restore + the paired-guard settling
+
+    // The dev control is at the bottom of the home tab, below the widget preview.
+    bundles.swipeUp()
+    Thread.sleep(forTimeInterval: 1)
+
+    let start = bundles.descendants(matching: .any)["activity-dev-start"]
+    guard start.waitForExistence(timeout: 20) else {
+      attach(XCUIScreen.main.screenshot(), named: "FAILED-no-dev-control")
+      XCTFail("dev control not found — is SHOW_ACTIVITY_DEV_CONTROL true in this build?")
+      return
+    }
+    start.tap()
+    Thread.sleep(forTimeInterval: 4)
+
+    // The status line prints ActivityKit's verbatim error if start threw. Screenshot it either way:
+    // "nothing on the island" and "start threw LiveActivitiesNotSupported" look identical from the
+    // home screen, and only this picture tells them apart.
+    attach(XCUIScreen.main.screenshot(), named: "foreground-after-start")
+
+    // Q1: is it visible while the app IS in use? (HIG says no.)
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 4)
+    attach(XCUIScreen.main.screenshot(), named: "background-island")
+
+    // Expanded presentation — a long press on the island. Coordinates, because the island has no
+    // addressable accessibility element of its own.
+    let island = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.022))
+    island.press(forDuration: 1.2)
+    Thread.sleep(forTimeInterval: 2)
+    attach(XCUIScreen.main.screenshot(), named: "background-island-expanded")
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 2)
+
+    // Q2 — the one that decides rotation: does an update land when the app is not in front?
+    // Re-enter, tap Update, leave immediately, and photograph the island.
+    bundles.activate()
+    Thread.sleep(forTimeInterval: 3)
+    let update = bundles.descendants(matching: .any)["activity-dev-update"]
+    if update.waitForExistence(timeout: 10) {
+      update.tap()
+      Thread.sleep(forTimeInterval: 2)
+      XCUIDevice.shared.press(.home)
+      Thread.sleep(forTimeInterval: 4)
+      attach(XCUIScreen.main.screenshot(), named: "after-update-island")
+    }
+
+    // Notification Center carries Live Activities too, and is the closest scriptable stand-in for
+    // the Lock Screen.
+    let top = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.0))
+    let down = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.7))
+    top.press(forDuration: 0.1, thenDragTo: down)
+    Thread.sleep(forTimeInterval: 3)
+    attach(XCUIScreen.main.screenshot(), named: "notification-center-activity")
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 2)
+
+    // Clean up, and prove end() works — a stuck activity is its own bug.
+    bundles.activate()
+    Thread.sleep(forTimeInterval: 3)
+    let end = bundles.descendants(matching: .any)["activity-dev-end"]
+    if end.waitForExistence(timeout: 10) {
+      end.tap()
+      Thread.sleep(forTimeInterval: 3)
+      XCUIDevice.shared.press(.home)
+      Thread.sleep(forTimeInterval: 4)
+      attach(XCUIScreen.main.screenshot(), named: "after-end-island")
+    }
+  }
+
   /// Capture every home-screen page.
   ///
   /// Locating the Bundles widget programmatically is unreliable — a widget's accessibility tree is
