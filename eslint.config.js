@@ -6,6 +6,6 @@ module.exports = defineConfig([
   expoConfig,
   {
     // Edge Functions run in Deno (Supabase), not the app — different globals/imports; linted there.
-    ignores: ["dist/*", "supabase/functions/**"],
+    ignores: ["dist/*", "supabase/functions/**", ".claude/worktrees/**"],
   }
 ]);

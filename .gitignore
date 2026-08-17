@@ -66,3 +66,6 @@ tools/widget-shot/WidgetShot.xcodeproj/
 
 # Claude Code session transcript dumps (kept locally, not part of the repo)
 [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*-bash*.txt
+
+# Parallel-work git worktrees (created by git worktree add, never committed)
+.claude/worktrees/
