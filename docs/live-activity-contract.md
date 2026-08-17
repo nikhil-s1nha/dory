@@ -124,21 +124,39 @@ Sent by `notify-partner` **in addition to** the existing visible alert, not inst
 - Reuse the existing cached ES256 JWT signer in `notify-partner/index.ts` — raw r‖s, not DER. That
   code is already proven against real APNs; do not write a second signer.
 
+The payload below is the **corrected** one. An earlier draft of this block showed a
+`BundlesActivity` attributes-type with a structured content-state; that was wrong (see the
+correction above) and is kept nowhere, deliberately — copying it produced a push APNs accepts and
+ActivityKit silently drops.
+
 ```jsonc
 {
   "aps": {
     "timestamp": 1723800000,
-    "event": "start",                    // "start" | "update" | "end"
-    "content-state": { /* BundlesActivityContentState */ },
-    "attributes-type": "BundlesActivity",
-    "attributes": { "coupleId": "…" },   // start only
-    "alert": {                           // REQUIRED on start, else iOS drops it
+    "event": "start",                       // "start" | "update" | "end"
+    "attributes-type": "LiveActivityAttributes",  // ALWAYS this literal, for every activity
+    "attributes": {},                       // start only; the shared struct has no fields
+    "content-state": {
+      "name": "BundlesActivity",            // routing key: picks the registered layout
+      "props": "{\"kind\":\"photo\",\"title\":\"Alex sent you a photo\",…}"
+                                            // ^ a JSON *string*, not an object
+    },
+    "alert": {                              // REQUIRED on start, else iOS drops it
       "title": "Alex",
       "body": "sent you a photo"
     }
   }
 }
 ```
+
+Two consequences that are easy to get wrong:
+
+- The 4 KB content-state ceiling applies to the **stringified** `props`, which is larger than the
+  object form because of escaping. Measure the string, not the object.
+- `imageFile` in `props` is a bare **filename**. The app resolves it to an absolute `file://` URI
+  before handing it to the layout, because `@expo/ui`'s ImageView loads via `URL(string:)` and a
+  schemeless name silently renders nothing. The wire shape stays a filename; the resolution is the
+  app's job.
 
 Prune a token on 410 / `BadDeviceToken` exactly as the existing push path does.
 
