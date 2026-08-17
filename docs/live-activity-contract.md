@@ -101,6 +101,30 @@ second account signing in on the same phone takes ownership instead of inheritin
 
 Verification sentinel: `BUNDLES_ACTIVITY_RLS_OK`, following the `supabase-ops` skill.
 
+### As built (2026-08-16) — three things the sketch above did not settle
+
+The column names and types are exactly as written. What the sketch left open, and how 0010 answers it:
+
+1. **`live_activity_instances` has no `environment`.** Deliberate — adding one would force a third
+   argument onto `registerActivityUpdateToken`, which the app lane already codes against. So an
+   `update`/`end` push infers its gateway from the recipient's most recently updated
+   `live_activity_tokens` row (an update token is always issued on a device that also registered a
+   push-to-start token), falling back to `'sandbox'`. Because that is an inference and not a
+   recorded fact, an update rejected as a dead token is retried once against the other gateway — but
+   **only a successful retry counts**; a failed one never overrides the first response's verdict.
+2. **The handover trigger also closes the previous owner's live activities**, not just the token
+   row. Reassigning the push-to-start token alone is not enough: an activity A started before
+   signing out is still on that lock screen and its *update* token still works, so B would see A's
+   photos. An instance row carries no device identity, so the rule is conservative — A's live
+   instances are ended (and their `update_token` nulled) only when the handover leaves A with **no
+   push-to-start token at all**, i.e. this was the only device we knew of for them. An A who still
+   has an iPad registered keeps that iPad's activity. The verification script asserts both halves.
+3. **`update_token` is nulled, not just `ended_at` stamped**, whenever an activity ends or APNs
+   declares its token dead. An ended activity must not stay addressable.
+
+Applied to the cloud project and verified live: `P0001: BUNDLES_ACTIVITY_RLS_OK` from
+`supabase/tests/verify_live_activity_rls_cloud.sql`.
+
 ## App → DB writes (app lane owns)
 
 `src/domain/activity/repository.ts`:
@@ -113,16 +137,32 @@ Verification sentinel: `BUNDLES_ACTIVITY_RLS_OK`, following the `supabase-ops` s
 - `recordActivityStarted(activityId: string, mediaId: string | null): Promise<void>`
 - `recordActivityEnded(activityId: string): Promise<void>`
 
+**ActivityKit's activity id is not available to JS at start time** — expo-widgets surfaces it only
+on the push-token event (`PushTokenEvent.activityId`), so `recordActivityStarted` cannot fire when
+the activity starts. The row is therefore *born* at the token event: `registerActivityUpdateToken`
+upserts `activity_id` + `update_token` together, and `started_at` defaults. The schema and the
+dispatch path both tolerate this — **nothing on the backend assumes a row exists just because an
+activity was started.** Until the token event fires the recipient looks tokenless and the backend
+sends a `start`, which can briefly duplicate an activity; the app should end the spare. (The
+alternative — letting a row with a null `update_token` suppress starts — would let one crashed
+launch silently disable the feature forever.)
+
 ## APNs payload (backend lane owns)
 
-Sent by `notify-partner` **in addition to** the existing visible alert, not instead of it.
+Sent by **`supabase/functions/notify-activity/index.ts`**, a separate function from `notify-partner`.
+`notify-partner` keeps its own proven alert path untouched and makes one guarded, fire-and-forget
+call into `notify-activity`, so a single send produces both the alert and the activity and a failure
+in the activity path cannot reach the alert path. Kill switch: function secret
+`NOTIFY_ACTIVITY_DISABLED=1`.
+
+The ES256 signer is **copied**, not extracted into a shared module — raw r‖s, not DER — precisely
+because the existing one is proven and a refactor is how that gets broken.
 
 - URL: `https://api{.sandbox}.push.apple.com/3/device/<pushToStartToken | updateToken>`
-  — sandbox vs production is read from the token row's `environment` column, never guessed.
+  — sandbox vs production is read from the token row's `environment` column, never guessed. For an
+  update token, see "As built" note 1 above.
 - Headers: `apns-topic: com.nikhilsinha.bundles.push-type.liveactivity`,
-  `apns-push-type: liveactivity`, `apns-priority: 10`.
-- Reuse the existing cached ES256 JWT signer in `notify-partner/index.ts` — raw r‖s, not DER. That
-  code is already proven against real APNs; do not write a second signer.
+  `apns-push-type: liveactivity`, `apns-priority: 10`, plus a one-hour `apns-expiration`.
 
 The payload below is the **corrected** one. An earlier draft of this block showed a
 `BundlesActivity` attributes-type with a structured content-state; that was wrong (see the
@@ -130,23 +170,22 @@ correction above) and is kept nowhere, deliberately — copying it produced a pu
 ActivityKit silently drops.
 
 ```jsonc
+// start
 {
   "aps": {
     "timestamp": 1723800000,
-    "event": "start",                       // "start" | "update" | "end"
-    "attributes-type": "LiveActivityAttributes",  // ALWAYS this literal, for every activity
-    "attributes": {},                       // start only; the shared struct has no fields
+    "event": "start",
+    "attributes-type": "LiveActivityAttributes",   // the shared expo-widgets struct, always
+    "attributes": {},                              // EMPTY, not omitted — see below
     "content-state": {
-      "name": "BundlesActivity",            // routing key: picks the registered layout
-      "props": "{\"kind\":\"photo\",\"title\":\"Alex sent you a photo\",…}"
-                                            // ^ a JSON *string*, not an object
+      "name": "BundlesActivity",                   // expo-widgets' layout routing key
+      "props": "{\"kind\":\"photo\",\"title\":\"Alex sent you a photo\",…}"  // STRINGIFIED
     },
-    "alert": {                              // REQUIRED on start, else iOS drops it
-      "title": "Alex",
-      "body": "sent you a photo"
-    }
+    "alert": { "title": "Alex", "body": "sent you a photo" }  // REQUIRED, else iOS drops it
   }
 }
+// update — same content-state, no attributes, no alert
+// end   — { "timestamp": …, "event": "end", "dismissal-date": … } and NO content-state
 ```
 
 Two consequences that are easy to get wrong:
@@ -158,7 +197,56 @@ Two consequences that are easy to get wrong:
   schemeless name silently renders nothing. The wire shape stays a filename; the resolution is the
   app's job.
 
-Prune a token on 410 / `BadDeviceToken` exactly as the existing push path does.
+`attributes` is `{}` rather than absent: APNs requires the key on a `start` event, and the shared
+`LiveActivityAttributes` struct declares no fields, so `{}` is the only value that both satisfies
+APNs and decodes. There is consequently nowhere for `coupleId` to live; it is **not currently sent
+at all**. If the activity needs it, it goes inside the stringified `props` — say so and both lanes
+change together.
+
+`end` carries no `content-state` on purpose: we would have to invent one, and a state the Swift
+struct cannot decode makes iOS drop the push, leaving the activity stuck on the lock screen — the
+exact opposite of the intent. `dismissal-date` in the present removes it now; without it an ended
+activity lingers for up to four hours.
+
+Prune on 410 / `BadDeviceToken` exactly as the existing push path does: a dead push-to-start token
+deletes its `live_activity_tokens` row; a dead update token closes its `live_activity_instances` row
+(`ended_at` set, `update_token` nulled) rather than deleting it.
+
+### Calling it
+
+```jsonc
+{ "mediaItemId": "<uuid>" }                     // start, or update if the recipient already has one
+{ "mediaItemId": "<uuid>", "event": "start" }   // force
+{ "mediaItemId": "<uuid>", "event": "update" }  // force
+{ "event": "end" }                              // end every live activity of the partner's
+```
+
+The only caller-supplied identity is a media id, and it must belong to the caller; couple, recipient
+and sender name are re-derived server-side, so this cannot push an activity onto a stranger's
+partner's lock screen. Reply is
+`{ "event": "start"|"update"|"end"|"none", "sent": n, "failed": n, "pruned": n }` — `"none"` means
+nobody was addressable, which is a normal 200 because the caller is fire-and-forget. Unauthenticated
+is 401; a malformed body or a non-uuid media id is 400; someone else's media id is 404.
+
+`kind: "music"` is not reachable from this function — it takes a media id, and now-playing has no
+`media_items` row. Music activities are the app's to start and update locally.
+
+### ⚠️ The APNs auth key is Sandbox-only (found 2026-08-16, against real APNs)
+
+A live probe of `api.push.apple.com` with the project's `.p8` returns **`403
+BadEnvironmentKeyInToken`**. The key is a Development/Sandbox-only APNs key, so **no push of any
+kind — alert or Live Activity — can reach a TestFlight or App Store build** until a universal APNs
+key is issued in the Apple Developer portal and `APNS_KEY_P8`/`APNS_KEY_ID` are replaced. This is
+not specific to Live Activities; `notify-partner` has the same exposure and has simply never hit it,
+because every install so far is a sandbox build.
+
+Confirmed by a controlled probe (2026-08-16): the same key, token and body sent seconds apart
+returned `403 BadEnvironmentKeyInToken` on production and `400 BadDeviceToken` on sandbox. The same
+probe run also established that **APNs validates the device token before the topic, the push type
+and the body** — a stripped payload, a 5,212-byte payload, a foreign topic and a wrong push type all
+returned an identical `BadDeviceToken`. So nothing in the envelope above is *confirmed* by a probe
+without a real device token; it is only un-refuted. Treat the topic, the push type, `attributes: {}`
+and the stringified `props` as unproven until they run against real hardware.
 
 ## Ordering problem, and who solves it
 

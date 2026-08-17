@@ -124,6 +124,57 @@ function isDeadToken(status: number, reason: string): boolean {
   return status === 410 || (status === 400 && (reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic'));
 }
 
+// ---------------------------------------------------------------------------------------------
+// ADDITIVE: Live Activity trigger. Everything below this line is best-effort and must never be able
+// to affect the alert above, which is deployed and proven against real APNs.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Kick `notify-activity` off for the same media item, so one send produces both the visible alert
+ * and the lock-screen Live Activity.
+ *
+ * Deliberately `void`-returning and synchronous: there is no promise for the caller to await, so no
+ * edit to the alert path can accidentally start awaiting one. Every failure mode is contained —
+ * a throw from `fetch()` itself is caught by the outer try, a rejected request by `.catch`, and a
+ * non-2xx response is simply ignored (this function's own reply is the only one that matters).
+ *
+ * `EdgeRuntime.waitUntil` keeps the request alive past our response where it exists; it is probed
+ * rather than referenced so that a runtime without it degrades to "the fetch may be cut short",
+ * never to a ReferenceError. In practice the APNs loop that follows gives it ample time anyway.
+ *
+ * Set the function secret `NOTIFY_ACTIVITY_DISABLED=1` to switch the whole thing off without a
+ * redeploy of this file.
+ */
+function triggerLiveActivity(authHeader: string, mediaItemId: string): void {
+  try {
+    if (Deno.env.get('NOTIFY_ACTIVITY_DISABLED')) return;
+    const base = Deno.env.get('SUPABASE_URL');
+    if (!base) return;
+
+    const pending = fetch(`${base}/functions/v1/notify-activity`, {
+      method: 'POST',
+      headers: {
+        authorization: authHeader,
+        apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        'content-type': 'application/json',
+      },
+      // Only the media id: notify-activity re-derives sender, couple and recipient itself, exactly
+      // as this function does, so nothing here can widen who gets pushed.
+      body: JSON.stringify({ mediaItemId }),
+    })
+      .then(
+        // Drain the body so the connection is released; the result is genuinely not our business.
+        (res) => res.text().then(() => undefined, () => undefined),
+        (e) => { console.error('notify-activity request failed:', String(e)); },
+      );
+
+    const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
+    runtime?.waitUntil?.(pending);
+  } catch (e) {
+    console.error('notify-activity trigger threw:', String(e));
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok');
 
@@ -174,6 +225,13 @@ Deno.serve(async (req) => {
   if (!partnerId || partnerId === user.id) {
     return new Response(JSON.stringify({ sent: 0, failed: 0, pruned: 0 }), { headers: jsonHeaders });
   }
+
+  // ADDITIVE: start/update the partner's lock-screen Live Activity alongside this alert. Fired here,
+  // before the APNs work below, so it overlaps with it rather than adding latency — and placed after
+  // the partner check but *before* the "no device tokens" early return, because a phone can have a
+  // push-to-start token registered without an alert token (permission declined) and still deserves
+  // the activity. Not awaited; see triggerLiveActivity.
+  triggerLiveActivity(authHeader, item.id);
 
   const { data: senderProfile } = await svc
     .from('profiles')
