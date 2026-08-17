@@ -268,14 +268,23 @@ export async function syncWidgetOnOpen(coupleId: string, userId: string): Promis
     const stored = await AsyncStorage.getItem(CURSOR_KEY);
     const prevCursor = stored === null ? INITIAL_CURSOR : Number(stored);
     const { cursor, item } = advanceStack(present, prevCursor);
-    await AsyncStorage.setItem(CURSOR_KEY, String(cursor));
 
     const props = await buildProps(item, ctx);
     // `_imageDebug` is not read by the widget component — it rides along so the downscale result is
     // visible in the App Group plist, which is the only channel readable from a host machine
     // (Metro logs don't stream here, and devicectl can't reach the ExpoWidgets directory).
     BundlesWidget.updateSnapshot({ ...props, _imageDebug: lastImageDebug } as BundlesWidgetProps);
-  } catch {
-    /* leave the widget on its last good snapshot */
+
+    // Commit the cursor only once the snapshot it selected is actually on screen. Persisting it
+    // before `buildProps` meant a download timeout advanced *past* an item that was never
+    // rendered — the partner's photo was skipped, permanently and silently, because the next open
+    // would start from the item after it. Leaving the cursor where it is makes the next open retry
+    // the same item, which is the behavior a transient failure should have.
+    await AsyncStorage.setItem(CURSOR_KEY, String(cursor));
+  } catch (error) {
+    // Say what broke. The widget still keeps its last good snapshot, but a bare `catch {}` here is
+    // how this pipeline became undebuggable three separate times: the symptom is always "the
+    // widget looks frozen", and the cause is always a specific step that already knew its name.
+    console.warn('[widget-sync] syncWidgetOnOpen failed; widget keeps its last snapshot', error);
   }
 }
