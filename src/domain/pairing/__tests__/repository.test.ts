@@ -2,8 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isValidCodeFormat } from '../invite-code';
 import {
   createCoupleWithInvite,
+  fetchProfile,
   findOutstandingInvite,
   redeemInvite,
+  sameProfile,
 } from '../repository';
 
 /**
@@ -132,6 +134,70 @@ describe('findOutstandingInvite', () => {
   it('propagates a lookup error', async () => {
     const client = makeSelectClient({ couple: { error: new Error('rls denied') } });
     await expect(findOutstandingInvite(client, 'user-a')).rejects.toThrow('rls denied');
+  });
+});
+
+/**
+ * Fake for the profiles read. `throws` models the case supabase-js does *not* fold into `error`:
+ * a rejected fetch, which is exactly what a network blip at launch looks like.
+ */
+function makeProfileClient(preset: {
+  data?: { id: string; display_name: string; couple_id: string | null } | null;
+  error?: unknown;
+  throws?: unknown;
+}) {
+  const b: Record<string, unknown> = {};
+  for (const m of ['select', 'eq']) b[m] = () => b;
+  b.maybeSingle = async () => {
+    if (preset.throws) throw preset.throws;
+    return { data: preset.data ?? null, error: preset.error ?? null };
+  };
+  return { from: () => b } as unknown as SupabaseClient;
+}
+
+describe('fetchProfile', () => {
+  it('returns the mapped profile when the row exists', async () => {
+    const client = makeProfileClient({
+      data: { id: 'user-a', display_name: 'Ada', couple_id: 'couple-1' },
+    });
+    expect(await fetchProfile(client, 'user-a')).toEqual({
+      status: 'ok',
+      profile: { id: 'user-a', displayName: 'Ada', coupleId: 'couple-1' },
+    });
+  });
+
+  it('reports an absent row as ok-with-no-profile, not as an error', async () => {
+    const client = makeProfileClient({ data: null });
+    expect(await fetchProfile(client, 'user-a')).toEqual({ status: 'ok', profile: null });
+  });
+
+  // The whole point of the three-way result: a paired user whose read failed must not be
+  // indistinguishable from a user who has no profile row, because the root layout routes on it.
+  it('reports a query error as an error, never as an absent profile', async () => {
+    const boom = new Error('network down');
+    const result = await fetchProfile(makeProfileClient({ error: boom }), 'user-a');
+    expect(result).toEqual({ status: 'error', error: boom });
+  });
+
+  it('reports a thrown/rejected request as an error rather than propagating it', async () => {
+    const boom = new Error('Network request failed');
+    const result = await fetchProfile(makeProfileClient({ throws: boom }), 'user-a');
+    expect(result).toEqual({ status: 'error', error: boom });
+  });
+});
+
+describe('sameProfile', () => {
+  const base = { id: 'user-a', displayName: 'Ada', coupleId: 'couple-1' };
+
+  it('is true for equal values and for two absent profiles', () => {
+    expect(sameProfile(base, { ...base })).toBe(true);
+    expect(sameProfile(null, null)).toBe(true);
+  });
+
+  it('is false when the pairing state changes — the field the whole app gates on', () => {
+    expect(sameProfile(base, { ...base, coupleId: null })).toBe(false);
+    expect(sameProfile(base, null)).toBe(false);
+    expect(sameProfile(null, base)).toBe(false);
   });
 });
 

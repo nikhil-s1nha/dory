@@ -10,10 +10,56 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getRandomBytes } from 'expo-crypto';
 import { buildInvite, mapRedeemResult, type RedeemOutcome } from './service';
-import type { Invite } from './types';
+import type { Invite, Profile } from './types';
 
 /** A CSPRNG byte source for invite codes, backed by expo-crypto on device. */
 const secureRandomBytes = (n: number): Uint8Array => getRandomBytes(n);
+
+/**
+ * The result of reading a profile — three answers, not two.
+ *
+ * "There is no such row" and "we could not find out" look identical if both collapse to `null`,
+ * and the app gates its entire navigation on `profile.coupleId`. Collapsing them meant one failed
+ * request at launch presented a paired couple with the pairing screen, with no way back short of
+ * relaunching. Callers must decide what an `error` means; only `ok` is evidence about pairing.
+ */
+export type ProfileFetch =
+  | { status: 'ok'; profile: Profile | null }
+  | { status: 'error'; error: unknown };
+
+/**
+ * Read the caller's own row from public.profiles. Never throws: transient failures come back as
+ * `{ status: 'error' }` so the caller can retry rather than act on a wrong answer.
+ */
+export async function fetchProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ProfileFetch> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, couple_id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return { status: 'error', error };
+    if (!data) return { status: 'ok', profile: null };
+    return {
+      status: 'ok',
+      profile: { id: data.id, displayName: data.display_name, coupleId: data.couple_id },
+    };
+  } catch (error) {
+    // supabase-js surfaces most failures through `error`, but a rejected fetch (airplane mode
+    // mid-flight) still escapes as a throw. Same answer either way: we don't know.
+    return { status: 'error', error };
+  }
+}
+
+/** Whether two profile reads describe the same user in the same pairing state. */
+export function sameProfile(a: Profile | null, b: Profile | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.id === b.id && a.displayName === b.displayName && a.coupleId === b.coupleId;
+}
 
 export interface CreateInviteResult {
   coupleId: string;

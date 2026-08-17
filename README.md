@@ -23,7 +23,8 @@ npm run typecheck
 npm test
 ```
 
-All three run in CI on every push/PR to `main` (`.github/workflows/ci.yml`).
+All three run in CI (`.github/workflows/ci.yml`) on every push to `main`, `expoApproach`, or a
+`feat/` / `fix/` / `chore/` branch, and on every pull request targeting `main` or `expoApproach`.
 
 ## Layout
 

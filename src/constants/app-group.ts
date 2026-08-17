@@ -17,17 +17,12 @@ export const URL_SCHEME = 'bundles';
 /** The shared container both the app and the widget extension can read/write. */
 export const APP_GROUP_IDENTIFIER = `group.${IOS_BUNDLE_IDENTIFIER}`;
 
-/** Durable source of truth inside the container, read by whichever widget we ship. */
-export const WIDGET_STATE_FILENAME = 'state.json';
-
-/** Widget-sized image derivatives live here. Never full-resolution originals. */
-export const WIDGET_IMAGES_DIRNAME = 'images';
-
-/**
- * Bumped whenever the shape of `state.json` changes. The widget refuses to render
- * state it does not understand rather than crashing inside the 30MB extension.
- */
-export const WIDGET_STATE_VERSION = 1;
+// A hand-rolled `state.json` + `images/` layout (with its own version field) was designed here
+// before expo-widgets landed. It was never built: `updateSnapshot` carries the props and
+// `downloadToAppGroup` writes the image files directly, so there is no second source of truth to
+// keep in sync. The constants that described it are gone rather than sitting here documented as
+// "durable source of truth" while nothing reads them. Only reintroduce them alongside a widget
+// that actually parses the file.
 
 /**
  * Widget extensions are killed at 30MB (EXC_RESOURCE RESOURCE_TYPE_MEMORY). A 12MP

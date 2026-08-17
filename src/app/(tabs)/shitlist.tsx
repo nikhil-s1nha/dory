@@ -55,6 +55,11 @@ export default function ShitlistScreen() {
 
   const inputs = useRef(new Map<string, TextInput>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // The text we believe is on the server for each row — what a rejected save reverts to. Without
+  // it a failed write left the edit sitting there looking saved, and the row silently changed back
+  // the next time the list was fetched or the partner's echo arrived. This is a shared list, so
+  // that desync is visible to both people at different times, which is the confusing way to lose it.
+  const lastSaved = useRef(new Map<string, string>());
   const focusedId = useRef<string | null>(null);
   // Id of a row to focus once it has rendered — a ref, so clearing it in the effect below doesn't
   // trigger another render (which the setState-in-effect lint rule forbids).
@@ -70,13 +75,18 @@ export default function ShitlistScreen() {
     const run = async () => {
       try {
         const fetched = await fetchItems(supabase, coupleId);
-        if (active) setItems((prev) => upsertMany(prev, fetched));
+        if (!active) return;
+        fetched.forEach((i) => lastSaved.current.set(i.id, i.text));
+        setItems((prev) => upsertMany(prev, fetched));
       } finally {
         if (active) setLoading(false);
       }
     };
     run();
     const unsubscribe = subscribeToItems(supabase, coupleId, (change) => {
+      // Track the server's value outside the state updater — updaters can run more than once.
+      if (change.kind === 'delete') lastSaved.current.delete(change.id);
+      else lastSaved.current.set(change.item.id, change.item.text);
       setItems((prev) => {
         if (change.kind === 'delete') return removeItem(prev, change.id);
         if (change.item.id === focusedId.current) return prev; // don't clobber active edit
@@ -105,25 +115,65 @@ export default function ShitlistScreen() {
     [],
   );
 
-  const saveTextNow = useCallback((id: string, text: string) => {
-    const t = timers.current.get(id);
-    if (t) {
-      clearTimeout(t);
-      timers.current.delete(id);
+  /**
+   * Write an edit through, and put the row back if the server refuses — the same optimistic-then-
+   * revert shape `onToggle` uses. A save that fails must not leave the screen asserting something
+   * the database never accepted.
+   */
+  const persistText = useCallback(async (id: string, text: string) => {
+    try {
+      await setItemText(supabase, id, text);
+      lastSaved.current.set(id, text);
+    } catch {
+      const known = lastSaved.current.get(id);
+      // Nothing known means we've never seen a server value for this row (its insert failed too),
+      // so there is no truthful value to revert to; leave what's on screen for the user to retry.
+      if (known !== undefined) setItems((prev) => setText(prev, id, known));
     }
-    setItemText(supabase, id, text).catch(() => {});
   }, []);
 
-  const scheduleSave = useCallback((id: string, text: string) => {
-    const existing = timers.current.get(id);
-    if (existing) clearTimeout(existing);
-    timers.current.set(
-      id,
-      setTimeout(() => {
+  const saveTextNow = useCallback(
+    (id: string, text: string) => {
+      const t = timers.current.get(id);
+      if (t) {
+        clearTimeout(t);
         timers.current.delete(id);
-        setItemText(supabase, id, text).catch(() => {});
-      }, SAVE_DEBOUNCE_MS),
-    );
+      }
+      void persistText(id, text);
+    },
+    [persistText],
+  );
+
+  const scheduleSave = useCallback(
+    (id: string, text: string) => {
+      const existing = timers.current.get(id);
+      if (existing) clearTimeout(existing);
+      timers.current.set(
+        id,
+        setTimeout(() => {
+          timers.current.delete(id);
+          void persistText(id, text);
+        }, SAVE_DEBOUNCE_MS),
+      );
+    },
+    [persistText],
+  );
+
+  /**
+   * Remove a row optimistically and bring it back if the delete fails. A row that vanishes and
+   * then reappears on the next fetch is the same class of silent desync as a reverted edit, and on
+   * a shared list the partner sees the reappearance too.
+   */
+  const removeAndPersist = useCallback((item: ShitlistItem) => {
+    setItems((prev) => removeItem(prev, item.id));
+    const t = timers.current.get(item.id);
+    if (t) clearTimeout(t);
+    timers.current.delete(item.id);
+    lastSaved.current.delete(item.id);
+    deleteItem(supabase, item.id).catch(() => {
+      lastSaved.current.set(item.id, item.text);
+      setItems((prev) => upsertItem(prev, item));
+    });
   }, []);
 
   const createItem = useCallback(
@@ -132,6 +182,7 @@ export default function ShitlistScreen() {
       try {
         const item = await addItem(supabase, { coupleId, text, createdBy: userId, now: Date.now() });
         pendingFocus.current = item.id;
+        lastSaved.current.set(item.id, item.text);
         setItems((prev) => upsertItem(prev, item));
       } catch {
         /* transient — the add row is still there to retry */
@@ -152,11 +203,7 @@ export default function ShitlistScreen() {
         // Return on an already-empty item ends the checklist (Apple Notes reverts it / stops adding)
         // rather than spawning another empty row.
         if (before.length === 0 && after.length === 0) {
-          setItems((prev) => removeItem(prev, item.id));
-          const t = timers.current.get(item.id);
-          if (t) clearTimeout(t);
-          timers.current.delete(item.id);
-          deleteItem(supabase, item.id).catch(() => {});
+          removeAndPersist(item);
           Keyboard.dismiss();
           return;
         }
@@ -168,7 +215,7 @@ export default function ShitlistScreen() {
       setItems((prev) => setText(prev, item.id, text));
       scheduleSave(item.id, text);
     },
-    [createItem, saveTextNow, scheduleSave],
+    [createItem, removeAndPersist, saveTextNow, scheduleSave],
   );
 
   const onToggle = useCallback(async (item: ShitlistItem) => {
@@ -186,13 +233,9 @@ export default function ShitlistScreen() {
       const idx = ordered.findIndex((i) => i.id === item.id);
       const prevItem = idx > 0 ? ordered[idx - 1] : null;
       if (prevItem) pendingFocus.current = prevItem.id;
-      setItems((prev) => removeItem(prev, item.id));
-      const t = timers.current.get(item.id);
-      if (t) clearTimeout(t);
-      timers.current.delete(item.id);
-      deleteItem(supabase, item.id).catch(() => {});
+      removeAndPersist(item);
     },
-    [ordered],
+    [ordered, removeAndPersist],
   );
 
   const onKeyPress = useCallback(

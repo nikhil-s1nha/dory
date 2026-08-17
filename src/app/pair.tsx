@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { describePairingError, isUniqueViolation } from '@/domain/pairing/errors';
 import { normalizeCode } from '@/domain/pairing/invite-code';
 import {
   createCoupleWithInvite,
@@ -36,6 +37,15 @@ const REDEEM_MESSAGES: Record<Exclude<RedeemOutcome, { ok: true }>['reason'], st
   UNKNOWN: 'Something went wrong. Try again.',
 };
 
+/** Best-effort second look for an invite we already own. Its own failure isn't worth reporting. */
+async function recoverOutstanding(uid: string): Promise<OutstandingInvite | null> {
+  try {
+    return await findOutstandingInvite(supabase, uid);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Shown to signed-in users who aren't paired yet. Two ways forward: mint an invite for your
  * partner, or enter the code they sent you. On a successful redeem we refresh the profile, which
@@ -52,6 +62,7 @@ export default function PairScreen() {
   const [entered, setEntered] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Load any existing outstanding invite on mount. State updates live inside the async run so
   // nothing is set synchronously during the effect; `loading` already starts true.
@@ -63,7 +74,7 @@ export default function PairScreen() {
         const found = await findOutstandingInvite(supabase, userId);
         if (active) setOutstanding(found);
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : 'Could not load your invite.');
+        if (active) setError(describePairingError(e, 'Could not load your invite.'));
       } finally {
         if (active) setLoading(false);
       }
@@ -82,7 +93,18 @@ export default function PairScreen() {
       const { invite, coupleId } = await createCoupleWithInvite(supabase, userId, Date.now());
       setOutstanding({ coupleId, code: invite.code, expiresAt: invite.expiresAt });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create an invite.');
+      // A member_a unique violation means this account already owns a couple — the invite exists,
+      // we just failed to see it on mount (the same failed read that can land a user here in the
+      // first place). Recover it silently; showing an error for a code we already have is absurd.
+      if (isUniqueViolation(e)) {
+        const recovered = await recoverOutstanding(userId);
+        if (recovered) {
+          setOutstanding(recovered);
+          setBusy(false);
+          return;
+        }
+      }
+      setError(describePairingError(e, 'Could not create an invite.'));
     } finally {
       setBusy(false);
     }
@@ -100,10 +122,29 @@ export default function PairScreen() {
       }
       setError(REDEEM_MESSAGES[outcome.reason]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not redeem that code.');
+      setError(describePairingError(e, 'Could not redeem that code.'));
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * `signOut()` returns `{ error }` and that return used to be dropped on the floor, so a failed
+   * sign-out (expired session, no connection) left the user tapping a button that did nothing at
+   * all. On success the root gate unmounts this screen, so `signingOut` is only ever cleared on
+   * the failure path.
+   */
+  async function onSignOut() {
+    setError(null);
+    setSigningOut(true);
+    try {
+      const { error: signOutError } = await signOut();
+      if (!signOutError) return;
+    } catch {
+      /* fall through to the same message — either way we're still signed in */
+    }
+    setError('Could not sign out. Check your connection and try again.');
+    setSigningOut(false);
   }
 
   async function onCopy() {
@@ -184,18 +225,27 @@ export default function PairScreen() {
                 )}
               </Pressable>
             </View>
-
-            {error && (
-              <ThemedText type="small" style={styles.error}>
-                {error}
-              </ThemedText>
-            )}
           </>
         )}
 
-        <Pressable onPress={() => signOut()} hitSlop={8} style={styles.signOut}>
+        {/* Outside the loading branch: a sign-out failure has to be visible too, and the sign-out
+            button is the one control that's live at every point on this screen. */}
+        {error && (
+          <ThemedText type="small" style={styles.error}>
+            {error}
+          </ThemedText>
+        )}
+
+        <Pressable
+          onPress={() => {
+            void onSignOut();
+          }}
+          disabled={signingOut}
+          hitSlop={8}
+          accessibilityRole="button"
+          style={styles.signOut}>
           <ThemedText type="link" themeColor="textSecondary">
-            Sign out
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </ThemedText>
         </Pressable>
       </View>
