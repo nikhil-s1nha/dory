@@ -12,12 +12,18 @@ SplashScreen.preventAutoHideAsync();
 
 /**
  * Declarative auth gate. `Stack.Protected` mounts only the screen whose guard is true, so the
- * three states map one-to-one: signed out -> /auth, signed in but unpaired -> /pair, paired ->
- * the (tabs) app. While `loading`, the native splash is still up, so the transient state is hidden.
+ * states map one-to-one: signed out -> /auth, signed in but unpaired -> /pair, paired -> the
+ * (tabs) app. While `loading`, the native splash is still up, so the transient state is hidden.
+ *
+ * The fourth state is "we couldn't read the profile". It gets its own screen rather than falling
+ * through to /pair: a failed read is not evidence the user is unpaired, and routing a paired
+ * couple to pairing is both alarming and a dead end (their only button hits the member_a unique
+ * constraint). `profileError` therefore *excludes* /pair rather than merely decorating it.
  */
 function RootNavigator() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, profileError, loading } = useAuth();
   const paired = !!profile?.coupleId;
+  const unknownPairing = !!session && !paired && profileError;
 
   // The screens below only exist once `paired` is true, so a widget tap that cold-starts the app
   // resolves its URL against a navigator that doesn't have the destination yet. Replay it here.
@@ -32,7 +38,10 @@ function RootNavigator() {
       <Stack.Protected guard={!session}>
         <Stack.Screen name="auth" />
       </Stack.Protected>
-      <Stack.Protected guard={!!session && !paired}>
+      <Stack.Protected guard={unknownPairing}>
+        <Stack.Screen name="connection" />
+      </Stack.Protected>
+      <Stack.Protected guard={!!session && !paired && !profileError}>
         <Stack.Screen name="pair" />
       </Stack.Protected>
       <Stack.Protected guard={paired}>
