@@ -53,8 +53,26 @@ export type BundlesActivityContentState = {
 };
 ```
 
-The activity name registered with `createLiveActivity` is **`BundlesActivity`**, which fixes the
-APNs `attributes-type` to the same string.
+The activity name registered with `createLiveActivity` is **`BundlesActivity`**.
+
+### ⚠️ Correction (2026-08-16) — how expo-widgets actually shapes the APNs payload
+
+The first draft of this contract assumed `attributes-type: "BundlesActivity"` and a structured
+`content-state`. **That is wrong**, and it was caught by reading
+`node_modules/expo-widgets/ios/Widgets/WidgetLiveActivity.swift` rather than by assuming.
+
+expo-widgets declares **one shared** `struct LiveActivityAttributes` for every activity in the app,
+with a `ContentState` of exactly two string fields — `name` and `props`. `name` is the routing key
+that selects which registered layout renders; `props` is the **JSON-stringified** payload, not a
+nested object. So:
+
+- `attributes-type` is **`LiveActivityAttributes`** — the same value for every activity, forever.
+- `content-state` is `{ "name": "BundlesActivity", "props": "<stringified BundlesActivityContentState>" }`.
+- **`BundlesActivityAttributes` is not expressible.** The shared attributes struct has no custom
+  fields, so `coupleId` cannot ride along as an attribute. If the activity needs it, it goes inside
+  the stringified `props`.
+
+`BundlesActivityContentState` above is still the right shape — it just travels as a string.
 
 ## Database (backend lane owns)
 
