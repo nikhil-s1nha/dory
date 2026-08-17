@@ -1,10 +1,18 @@
 name: CI
 
+# `main` is a single empty root commit and stays that way (see CLAUDE.md) — all work happens on
+# `expoApproach` and the short-lived branches that merge into it. Triggering only on `main` meant
+# CI had never once run against real code while claiming, in the README, to run on every push.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - expoApproach
+      - 'feat/**'
+      - 'fix/**'
+      - 'chore/**'
   pull_request:
-    branches: [main]
+    branches: [main, expoApproach]
 
 jobs:
   verify:
