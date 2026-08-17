@@ -66,14 +66,16 @@ If the state is bad, in this order of likelihood:
 grep -c "DEVELOPMENT_TEAM = K4MBJGZLNY" ios/Bundles.xcodeproj/project.pbxproj   # expect 4
 ```
 
-**This is not committed to the repo, despite how permanent it looks.** `/ios` is gitignored and
-`expo prebuild` does not emit `DEVELOPMENT_TEAM` at all, so every prebuild silently drops it and the
-next device build dies on signing. If the count above is 0 after a prebuild, put it back:
+**This is now emitted by a config plugin — do not re-apply it by hand.**
+`plugins/with-signing-and-versioning.js` (listed in `app.json`) sets `DEVELOPMENT_TEAM` and
+`CODE_SIGN_STYLE = Automatic` on every signable target, including `ExpoWidgetsTarget`, on every
+prebuild. The count above should be 4 straight out of `expo prebuild`.
 
-```sh
-perl -pi -e 's/^(\t*)(PRODUCT_BUNDLE_IDENTIFIER = .*;)$/$1$2\n$1DEVELOPMENT_TEAM = K4MBJGZLNY;/' \
-  ios/Bundles.xcodeproj/project.pbxproj
-```
+The `perl -pi -e` that used to live here is obsolete; running it now just duplicates lines. If the
+count *is* wrong after a prebuild, the plugin didn't run — check it is still listed **before**
+`expo-widgets` in `app.json` `plugins` (Expo runs mods last-registered-first, so earlier in the
+array means later at runtime) rather than patching the pbxproj. See
+`.claude/skills/testflight-release/` §3.
 
 **Apple ID vs Team ID** — these get conflated, and the confusion sends people to the wrong fix:
 
