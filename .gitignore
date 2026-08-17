@@ -75,3 +75,7 @@ tools/widget-shot/WidgetShot.xcodeproj/
 
 # Parallel-work git worktrees (created by git worktree add, never committed)
 .claude/worktrees/
+
+# Session transcripts written under an ad-hoc name rather than the dated shape above
+/sessionEdited.md
+/widgetBugSession.txt
