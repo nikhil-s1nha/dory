@@ -224,7 +224,8 @@ describe('activityContentStateFor', () => {
   it('opens a drawing on the canvas, pre-loaded, exactly as the widget does', () => {
     expect(activityContentStateFor('drawing', ctx, 'drawing-1.jpg')).toEqual({
       kind: 'drawing',
-      title: 'Alex sent you a drawing',
+      // Same wording the Edge Functions send, deliberately — see content-state.ts.
+      title: 'Alex drew you something',
       subtitle: '',
       imageFile: 'drawing-1.jpg',
       deepLink: 'bundles://draw?base=drawing-1',

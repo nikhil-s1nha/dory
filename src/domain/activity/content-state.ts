@@ -176,7 +176,10 @@ export function activityContentStateFor(
   if (item === 'drawing' && ctx.latestDrawing) {
     return makeActivityContentState({
       kind: 'drawing',
-      title: `${ctx.partnerName} sent you a drawing`,
+      // Must match notify-activity/notify-partner's wording exactly. The push-started frame renders
+      // the server's copy first and this local update replaces it, so any difference is a visible
+      // one-word flicker on every drawing. "drew you something" is the already-shipped alert copy.
+      title: `${ctx.partnerName} drew you something`,
       subtitle: '',
       // A drawing opens the canvas pre-loaded, ready to draw back (spec 3.2) — as the widget does.
       imageFile,

@@ -14,7 +14,9 @@ import { useAuth } from '@/lib/auth-context';
  * control is *not* on screen, and its absence is not a bug in the activity. Either install a Debug
  * build for the experiment, or flip this constant to `true` for the one build that needs it.
  */
-export const SHOW_ACTIVITY_DEV_CONTROL = __DEV__;
+// TEMPORARY (device experiment, not to be committed): forced on so the control is present in a
+// Release build, which is how this project installs to the phone. __DEV__ is false there.
+export const SHOW_ACTIVITY_DEV_CONTROL = true;
 
 /**
  * A deliberately ugly debug panel for driving the Live Activity by hand: Start, Update, End.
