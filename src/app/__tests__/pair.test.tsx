@@ -1,15 +1,17 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { createCoupleWithInvite, findOutstandingInvite } from '@/domain/pairing/repository';
+import { signOut } from '@/lib/auth';
 
 import PairScreen from '../pair';
 
 /**
  * The pairing screen's failure surface.
  *
- * `createCoupleWithInvite` rejecting on the `couples.member_a` unique index used to render the raw
- * Postgres string at the user — a correct diagnosis phrased as an implementation detail, with
- * nothing to do about it. Not reproducible by reading the screen, hence these.
+ * Two things used to go wrong here and both were invisible. `createCoupleWithInvite` rejecting on
+ * the `couples.member_a` unique index rendered the raw Postgres string at the user; and the
+ * `{ error }` that `signOut()` returns was discarded, so a failed sign-out looked like a dead
+ * button. Neither is reproducible by reading the screen — hence these.
  */
 
 jest.mock('@/global.css', () => ({}));
@@ -18,7 +20,7 @@ jest.mock('@/lib/auth-context', () => ({
   useAuth: () => ({ session: { user: { id: 'user-a' } }, refreshProfile: jest.fn() }),
 }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
-jest.mock('@/lib/auth', () => ({ signOut: jest.fn(async () => ({ error: null })) }));
+jest.mock('@/lib/auth', () => ({ signOut: jest.fn() }));
 jest.mock('@/domain/pairing/repository', () => ({
   findOutstandingInvite: jest.fn(),
   createCoupleWithInvite: jest.fn(),
@@ -27,6 +29,7 @@ jest.mock('@/domain/pairing/repository', () => ({
 
 const mockFindOutstanding = findOutstandingInvite as jest.Mock;
 const mockCreateCouple = createCoupleWithInvite as jest.Mock;
+const mockSignOut = signOut as jest.Mock;
 
 /** Exactly what supabase-js returns when this account already occupies slot A of a couple. */
 const memberASlotTaken = {
@@ -40,6 +43,7 @@ beforeEach(() => {
   mockCreateCouple
     .mockReset()
     .mockResolvedValue({ coupleId: 'couple-1', invite: { code: 'ABCDEFGH', expiresAt: 0 } });
+  mockSignOut.mockReset().mockResolvedValue({ error: null });
 });
 
 /** Render and let the mount-time invite lookup settle. */
@@ -88,3 +92,23 @@ describe('creating an invite', () => {
   });
 });
 
+describe('signing out', () => {
+  it('tells the user when sign-out fails instead of silently doing nothing', async () => {
+    mockSignOut.mockResolvedValue({ error: new Error('network down') });
+
+    await renderScreen();
+    fireEvent.press(screen.getByText('Sign out'));
+
+    expect(await screen.findByText(/could not sign out/i)).toBeTruthy();
+    // Pressable again: the failed attempt must not leave the control stuck.
+    expect(screen.getByText('Sign out')).toBeTruthy();
+  });
+
+  it('says nothing on success — the root gate takes the screen away', async () => {
+    await renderScreen();
+    fireEvent.press(screen.getByText('Sign out'));
+
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalled());
+    expect(screen.queryByText(/could not sign out/i)).toBeNull();
+  });
+});

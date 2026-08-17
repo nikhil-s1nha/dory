@@ -62,6 +62,7 @@ export default function PairScreen() {
   const [entered, setEntered] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Load any existing outstanding invite on mount. State updates live inside the async run so
   // nothing is set synchronously during the effect; `loading` already starts true.
@@ -125,6 +126,25 @@ export default function PairScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * `signOut()` returns `{ error }` and that return used to be dropped on the floor, so a failed
+   * sign-out (expired session, no connection) left the user tapping a button that did nothing at
+   * all. On success the root gate unmounts this screen, so `signingOut` is only ever cleared on
+   * the failure path.
+   */
+  async function onSignOut() {
+    setError(null);
+    setSigningOut(true);
+    try {
+      const { error: signOutError } = await signOut();
+      if (!signOutError) return;
+    } catch {
+      /* fall through to the same message — either way we're still signed in */
+    }
+    setError('Could not sign out. Check your connection and try again.');
+    setSigningOut(false);
   }
 
   async function onCopy() {
@@ -216,9 +236,16 @@ export default function PairScreen() {
           </ThemedText>
         )}
 
-        <Pressable onPress={() => signOut()} hitSlop={8} style={styles.signOut}>
+        <Pressable
+          onPress={() => {
+            void onSignOut();
+          }}
+          disabled={signingOut}
+          hitSlop={8}
+          accessibilityRole="button"
+          style={styles.signOut}>
           <ThemedText type="link" themeColor="textSecondary">
-            Sign out
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </ThemedText>
         </Pressable>
       </View>
