@@ -20,8 +20,12 @@
 //
 // Environment (Supabase function secrets) — identical to notify-partner:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY — injected by the platform
-//   APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID — the .p8 PEM, its 10-char Key ID, the Team ID
-//   APNS_FORCE_ENVIRONMENT — optional 'sandbox' | 'production' override of every row's environment
+//   APNS_KEY_P8 / APNS_KEY_ID       — the SANDBOX .p8 PEM and its 10-char Key ID
+//   APNS_KEY_P8_PRODUCTION / APNS_KEY_ID_PRODUCTION — the PRODUCTION pair. Neither key works on the
+//     other environment; see the signing-slot comment below for the measured proof.
+//   APNS_TEAM_ID  — shared by both keys
+//   APNS_FORCE_ENVIRONMENT — optional 'sandbox' | 'production' override of every row's environment,
+//     which now switches the signing key as well as the gateway
 //
 // The ES256 signer below is a deliberate copy of notify-partner's, not an import of a shared module.
 // That code is battle-tested against real APNs and its one subtle property — Web Crypto's raw r‖s
@@ -91,10 +95,27 @@ type MediaRow = { id: string; couple_id: string; sender_id: string; type: string
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Module scope survives between invocations on a warm isolate, which is the whole point: importing
-// the key and signing a JWT per notification would both waste CPU and trip APNs' update limit.
-let signingKey: CryptoKey | null = null;
-let cachedJwt: { token: string; mintedAt: number } | null = null;
+/**
+ * ONE SIGNING SLOT PER ENVIRONMENT — not one global slot.
+ *
+ * The project holds two APNs auth keys and **neither is universal**. Proven against real APNs, both
+ * directions, on 2026-08-16/17:
+ *
+ *   APNS_KEY_P8 (original)             production -> 403 BadEnvironmentKeyInToken, sandbox -> works
+ *   APNS_KEY_P8_PRODUCTION (8323H4JG5F) sandbox   -> 403 BadEnvironmentKeyInToken, production -> works
+ *
+ * So the key is as environment-specific as the host is, and the two must move together. Module
+ * scope survives between invocations on a warm isolate, which is the whole point of caching:
+ * importing the key and signing a JWT per notification would both waste CPU and trip APNs' update
+ * limit. But a *single* cache slot across two keys is a trap — after the first mint, every request
+ * regardless of environment would be handed whichever key's JWT got there first, and the symptom
+ * would not appear until the 50-minute window turned over. Keyed by environment, that cannot happen.
+ */
+type SigningSlot = { key: CryptoKey | null; jwt: { token: string; mintedAt: number } | null };
+const signingSlots: Record<ApnsEnvironment, SigningSlot> = {
+  sandbox: { key: null, jwt: null },
+  production: { key: null, jwt: null },
+};
 
 function base64Url(bytes: Uint8Array): string {
   let binary = '';
@@ -123,15 +144,26 @@ function pkcs8FromPem(pem: string): Uint8Array {
   return bytes;
 }
 
-async function apnsAuthToken(): Promise<string> {
-  if (cachedJwt && Date.now() - cachedJwt.mintedAt < APNS_JWT_TTL_MS) return cachedJwt.token;
-
-  const p8 = Deno.env.get('APNS_KEY_P8');
-  const keyId = Deno.env.get('APNS_KEY_ID');
+/** The .p8 + Key ID for one environment. Team ID is shared — both keys are on the same team. */
+function apnsCredentials(environment: ApnsEnvironment): { p8: string; keyId: string; teamId: string } {
   const teamId = Deno.env.get('APNS_TEAM_ID');
-  if (!p8 || !keyId || !teamId) throw new Error('missing APNs env');
+  const p8 = environment === 'production'
+    ? Deno.env.get('APNS_KEY_P8_PRODUCTION')
+    : Deno.env.get('APNS_KEY_P8');
+  const keyId = environment === 'production'
+    ? Deno.env.get('APNS_KEY_ID_PRODUCTION')
+    : Deno.env.get('APNS_KEY_ID');
+  if (!p8 || !keyId || !teamId) throw new Error(`missing APNs env for ${environment}`);
+  return { p8, keyId, teamId };
+}
 
-  signingKey ??= await crypto.subtle.importKey(
+async function apnsAuthToken(environment: ApnsEnvironment): Promise<string> {
+  const slot = signingSlots[environment];
+  if (slot.jwt && Date.now() - slot.jwt.mintedAt < APNS_JWT_TTL_MS) return slot.jwt.token;
+
+  const { p8, keyId, teamId } = apnsCredentials(environment);
+
+  slot.key ??= await crypto.subtle.importKey(
     'pkcs8',
     pkcs8FromPem(p8),
     { name: 'ECDSA', namedCurve: 'P-256' },
@@ -146,12 +178,12 @@ async function apnsAuthToken(): Promise<string> {
   // most OpenSSL-based examples do) produces a token APNs rejects as InvalidProviderToken.
   const signature = await crypto.subtle.sign(
     { name: 'ECDSA', hash: 'SHA-256' },
-    signingKey,
+    slot.key,
     new TextEncoder().encode(signingInput),
   );
 
   const token = `${signingInput}.${base64Url(new Uint8Array(signature))}`;
-  cachedJwt = { token, mintedAt: Date.now() };
+  slot.jwt = { token, mintedAt: Date.now() };
   return token;
 }
 
@@ -190,13 +222,19 @@ async function apnsReason(res: Response): Promise<string> {
 
 type ApnsResult = { ok: boolean; status: number; reason: string; environment: ApnsEnvironment };
 
+/**
+ * The one place a host and a signing key are chosen, and they are chosen from the SAME argument.
+ * That is the whole defence against the mismatch: there is no way to call this with a production
+ * key against the sandbox host, because neither is passed in — both are derived from `environment`.
+ * Mixing them is precisely the 403 BadEnvironmentKeyInToken this change exists to prevent.
+ */
 async function postToApns(
   environment: ApnsEnvironment,
   deviceToken: string,
   payload: string,
-  apnsJwt: string,
   expiration: string,
 ): Promise<ApnsResult> {
+  const apnsJwt = await apnsAuthToken(environment);
   const res = await fetch(`https://${APNS_HOSTS[environment]}/3/device/${deviceToken}`, {
     method: 'POST',
     headers: {
@@ -435,12 +473,23 @@ Deno.serve(async (req) => {
     return JSON.stringify({ aps: { timestamp, event: 'update', 'content-state': wireContentState() } });
   }
 
-  let apnsJwt: string;
-  try {
-    apnsJwt = await apnsAuthToken();
-  } catch (e) {
-    console.error('apns auth token failed:', String(e));
-    return new Response(JSON.stringify({ error: 'apns_auth_failed' }), { status: 500, headers: jsonHeaders });
+  // Pre-flight the credentials for every environment this request will actually touch, so a missing
+  // or malformed secret is a loud 500 instead of a silent per-row `failed`. `postToApns` mints
+  // on demand and caches, so this is a warm-up, not a second code path — and the retry may still
+  // reach an environment not listed here, which fails that one row and is caught below.
+  const environmentsInPlay = new Set<ApnsEnvironment>(
+    event === 'start'
+      ? (startTokens ?? []).map((row) =>
+          forcedEnvironment ?? ((row.environment as ApnsEnvironment | null) ?? 'sandbox'))
+      : [inferredEnvironment],
+  );
+  for (const environment of environmentsInPlay) {
+    try {
+      await apnsAuthToken(environment);
+    } catch (e) {
+      console.error('apns auth token failed for', environment, String(e));
+      return new Response(JSON.stringify({ error: 'apns_auth_failed' }), { status: 500, headers: jsonHeaders });
+    }
   }
 
   let sent = 0;
@@ -459,7 +508,7 @@ Deno.serve(async (req) => {
       const environment: ApnsEnvironment =
         forcedEnvironment ?? ((row.environment as ApnsEnvironment | null) ?? 'sandbox');
       try {
-        const res = await postToApns(environment, token, payload, apnsJwt, expiration);
+        const res = await postToApns(environment, token, payload, expiration);
         if (res.ok) {
           sent++;
         } else if (isDeadToken(res.status, res.reason)) {
@@ -491,18 +540,28 @@ Deno.serve(async (req) => {
     const token = row.update_token as string;
     try {
       // The first attempt is the authoritative one; the retry may only *improve* the outcome, never
-      // replace it. Found by running this against real APNs: this project's .p8 is a Sandbox-only
-      // APNs key, so every production-gateway request comes back 403 BadEnvironmentKeyInToken —
-      // which is not a dead token. Letting that response win turned a prunable 400 BadDeviceToken
-      // into a permanent `failed`, so dead update tokens would have accumulated forever.
-      const first = await postToApns(inferredEnvironment, token, payload, apnsJwt, expiration);
+      // replace it. That rule was earned: when the project had only a Sandbox-only key, every
+      // production-gateway retry came back 403 BadEnvironmentKeyInToken — not a dead token — and
+      // letting that win turned a prunable 400 BadDeviceToken into a permanent `failed`, so dead
+      // update tokens accumulated forever. The rule still holds now that both keys exist, because a
+      // retry can still fail for reasons that say nothing about the token.
+      //
+      // The retry swaps the ENVIRONMENT, which now swaps the signing key as well as the host —
+      // `postToApns` derives both from that one argument. Retrying the other host with the first
+      // host's key would be guaranteed to 403, which would make this whole path decorative.
+      const first = await postToApns(inferredEnvironment, token, payload, expiration);
       let res = first;
       if (!first.ok && isDeadToken(first.status, first.reason) && !forcedEnvironment) {
         const other: ApnsEnvironment = inferredEnvironment === 'sandbox' ? 'production' : 'sandbox';
-        console.error('activity update retrying on other gateway', tokenTail(token), inferredEnvironment, '->', other);
-        const retry = await postToApns(other, token, payload, apnsJwt, expiration);
-        if (retry.ok) res = retry;
-        else console.error('activity update retry also failed', tokenTail(token), other, retry.status, retry.reason);
+        console.error('activity update retrying on other gateway+key', tokenTail(token), inferredEnvironment, '->', other);
+        try {
+          const retry = await postToApns(other, token, payload, expiration);
+          if (retry.ok) res = retry;
+          else console.error('activity update retry also failed', tokenTail(token), other, retry.status, retry.reason);
+        } catch (e) {
+          // Most likely the other environment's credentials are missing. Never fatal: `first` stands.
+          console.error('activity update retry could not be attempted', tokenTail(token), other, String(e));
+        }
       }
 
       if (res.ok) {

@@ -11,9 +11,11 @@
 //
 // Environment (Supabase function secrets):
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY — injected by the platform
-//   APNS_KEY_P8   — the full PEM contents of the .p8 auth key (gitignored .apns-key.p8)
-//   APNS_KEY_ID   — the 10-char Key ID (the <KEYID> in the AuthKey_<KEYID>.p8 filename)
-//   APNS_TEAM_ID  — the Apple Developer Team ID
+//   APNS_KEY_P8   — PEM of the SANDBOX .p8 auth key (gitignored .apns-key.p8)
+//   APNS_KEY_ID   — its 10-char Key ID (the <KEYID> in the AuthKey_<KEYID>.p8 filename)
+//   APNS_KEY_P8_PRODUCTION / APNS_KEY_ID_PRODUCTION — the PRODUCTION pair. The project holds two
+//     keys because neither is universal; the signing-slot comment below has the measured proof.
+//   APNS_TEAM_ID  — the Apple Developer Team ID, shared by both keys
 //   APNS_FORCE_ENVIRONMENT — optional escape hatch, 'sandbox' | 'production'. When set it overrides
 //     every row's push_tokens.environment, for when a build registers against a host that doesn't
 //     match what the client reported.
@@ -46,10 +48,29 @@ const APNS_EXPIRATION_SECONDS = 60 * 60;
 type MediaType = 'photo' | 'drawing';
 type ApnsEnvironment = keyof typeof APNS_HOSTS;
 
-// Module scope survives between invocations on a warm isolate, which is the whole point: importing
-// the key and signing a JWT per notification would both waste CPU and trip APNs' update limit.
-let signingKey: CryptoKey | null = null;
-let cachedJwt: { token: string; mintedAt: number } | null = null;
+/**
+ * ONE SIGNING SLOT PER ENVIRONMENT — not one global slot.
+ *
+ * The project holds two APNs auth keys and **neither is universal**. Proven against real APNs, both
+ * directions, on 2026-08-16/17:
+ *
+ *   APNS_KEY_P8 (original)              production -> 403 BadEnvironmentKeyInToken, sandbox -> works
+ *   APNS_KEY_P8_PRODUCTION (8323H4JG5F) sandbox    -> 403 BadEnvironmentKeyInToken, production -> works
+ *
+ * Every install to date is a sandbox build, so this function's live behaviour is unchanged: a
+ * sandbox row still signs with APNS_KEY_P8 and still posts to the sandbox host, exactly as before.
+ * What changes is that a *production* row — which today would fail outright — now works.
+ *
+ * Module scope survives between invocations on a warm isolate, which is the whole point of caching.
+ * But a *single* cache slot across two keys is a trap: after the first mint, every request
+ * regardless of environment would be handed whichever key's JWT got there first, and the symptom
+ * would not appear until the 50-minute window turned over. Keyed by environment, that cannot happen.
+ */
+type SigningSlot = { key: CryptoKey | null; jwt: { token: string; mintedAt: number } | null };
+const signingSlots: Record<ApnsEnvironment, SigningSlot> = {
+  sandbox: { key: null, jwt: null },
+  production: { key: null, jwt: null },
+};
 
 function base64Url(bytes: Uint8Array): string {
   let binary = '';
@@ -78,15 +99,26 @@ function pkcs8FromPem(pem: string): Uint8Array {
   return bytes;
 }
 
-async function apnsAuthToken(): Promise<string> {
-  if (cachedJwt && Date.now() - cachedJwt.mintedAt < APNS_JWT_TTL_MS) return cachedJwt.token;
-
-  const p8 = Deno.env.get('APNS_KEY_P8');
-  const keyId = Deno.env.get('APNS_KEY_ID');
+/** The .p8 + Key ID for one environment. Team ID is shared — both keys are on the same team. */
+function apnsCredentials(environment: ApnsEnvironment): { p8: string; keyId: string; teamId: string } {
   const teamId = Deno.env.get('APNS_TEAM_ID');
-  if (!p8 || !keyId || !teamId) throw new Error('missing APNs env');
+  const p8 = environment === 'production'
+    ? Deno.env.get('APNS_KEY_P8_PRODUCTION')
+    : Deno.env.get('APNS_KEY_P8');
+  const keyId = environment === 'production'
+    ? Deno.env.get('APNS_KEY_ID_PRODUCTION')
+    : Deno.env.get('APNS_KEY_ID');
+  if (!p8 || !keyId || !teamId) throw new Error(`missing APNs env for ${environment}`);
+  return { p8, keyId, teamId };
+}
 
-  signingKey ??= await crypto.subtle.importKey(
+async function apnsAuthToken(environment: ApnsEnvironment): Promise<string> {
+  const slot = signingSlots[environment];
+  if (slot.jwt && Date.now() - slot.jwt.mintedAt < APNS_JWT_TTL_MS) return slot.jwt.token;
+
+  const { p8, keyId, teamId } = apnsCredentials(environment);
+
+  slot.key ??= await crypto.subtle.importKey(
     'pkcs8',
     pkcs8FromPem(p8),
     { name: 'ECDSA', namedCurve: 'P-256' },
@@ -101,12 +133,12 @@ async function apnsAuthToken(): Promise<string> {
   // most OpenSSL-based examples do) produces a token APNs rejects as InvalidProviderToken.
   const signature = await crypto.subtle.sign(
     { name: 'ECDSA', hash: 'SHA-256' },
-    signingKey,
+    slot.key,
     new TextEncoder().encode(signingInput),
   );
 
   const token = `${signingInput}.${base64Url(new Uint8Array(signature))}`;
-  cachedJwt = { token, mintedAt: Date.now() };
+  slot.jwt = { token, mintedAt: Date.now() };
   return token;
 }
 
@@ -275,16 +307,22 @@ Deno.serve(async (req) => {
     },
   });
 
-  let apnsJwt: string;
-  try {
-    apnsJwt = await apnsAuthToken();
-  } catch (e) {
-    console.error('apns auth token failed:', String(e));
-    return new Response(JSON.stringify({ error: 'apns_auth_failed' }), { status: 500, headers: jsonHeaders });
-  }
-
   const forcedEnvironment = Deno.env.get('APNS_FORCE_ENVIRONMENT') as ApnsEnvironment | undefined;
   const expiration = String(Math.floor(Date.now() / 1000) + APNS_EXPIRATION_SECONDS);
+
+  // Which environments this send will touch. Resolved once, up front, so a missing or malformed
+  // secret is the same loud 500 it has always been rather than a silent per-row failure.
+  const environmentFor = (row: { environment?: unknown }): ApnsEnvironment =>
+    forcedEnvironment ?? ((row.environment as ApnsEnvironment | null) ?? 'sandbox');
+
+  for (const environment of new Set(tokens.map(environmentFor))) {
+    try {
+      await apnsAuthToken(environment);
+    } catch (e) {
+      console.error('apns auth token failed for', environment, String(e));
+      return new Response(JSON.stringify({ error: 'apns_auth_failed' }), { status: 500, headers: jsonHeaders });
+    }
+  }
 
   let sent = 0;
   let failed = 0;
@@ -294,10 +332,13 @@ Deno.serve(async (req) => {
   // never take the others down with it.
   for (const row of tokens) {
     const deviceToken = row.device_token as string;
-    const environment: ApnsEnvironment =
-      forcedEnvironment ?? ((row.environment as ApnsEnvironment | null) ?? 'sandbox');
+    const environment = environmentFor(row);
 
     try {
+      // Host and signing key come from the SAME `environment`, never from two independent choices.
+      // Pairing a production key with the sandbox host (or the reverse) is 403
+      // BadEnvironmentKeyInToken — the failure this whole two-key arrangement exists to avoid.
+      const apnsJwt = await apnsAuthToken(environment);
       const res = await fetch(`https://${APNS_HOSTS[environment]}/3/device/${deviceToken}`, {
         method: 'POST',
         headers: {
@@ -332,14 +373,14 @@ Deno.serve(async (req) => {
       if (isDeadToken(res.status, reason)) {
         await svc.from('push_tokens').delete().eq('device_token', deviceToken);
         pruned++;
-        console.error('apns dead token pruned', tokenTail(deviceToken), res.status, reason);
+        console.error('apns dead token pruned', tokenTail(deviceToken), environment, res.status, reason);
       } else {
         failed++;
-        console.error('apns send failed', tokenTail(deviceToken), res.status, reason);
+        console.error('apns send failed', tokenTail(deviceToken), environment, res.status, reason);
       }
     } catch (e) {
       failed++;
-      console.error('apns request error', tokenTail(deviceToken), String(e));
+      console.error('apns request error', tokenTail(deviceToken), environment, String(e));
     }
   }
 
