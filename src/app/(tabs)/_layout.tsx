@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useLiveActivity } from '@/hooks/use-live-activity';
 import { usePush } from '@/hooks/use-push';
 import { useWidgetSync } from '@/hooks/use-widget-sync';
 import { useTheme } from '@/hooks/use-theme';
@@ -15,13 +16,16 @@ import { useTheme } from '@/hooks/use-theme';
  * icon that fills when active, and a small label. Built on expo-router's headless Tabs so we
  * fully control the bar's look (the classic Tabs navigator was dropped in SDK 57). Also mounts
  * `useWidgetSync`, which advances the smart stack and refreshes the home-screen widget on open, and
- * `usePush`, which registers this device for notifications and refreshes the widget when one lands.
+ * `usePush`, which registers this device for notifications and refreshes the widget when one lands,
+ * and `useLiveActivity`, which registers the push-to-start token and gives a push-started activity
+ * its image once the app is awake.
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const colors = useTheme();
   useWidgetSync();
   usePush();
+  useLiveActivity();
 
   return (
     <Tabs>

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { devEndActivity, devStartActivity, devUpdateActivity } from '@/domain/activity/dev-trigger';
 import { describeActivityError } from '@/domain/activity/live-activity';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 
 /**
  * Whether to render the Live Activity dev control.
@@ -26,6 +27,9 @@ export const SHOW_ACTIVITY_DEV_CONTROL = __DEV__;
  */
 export function ActivityDevControl() {
   const [status, setStatus] = useState('idle — tap Start');
+  const { session, profile } = useAuth();
+  const coupleId = profile?.coupleId ?? null;
+  const userId = session?.user.id ?? null;
 
   const run = (label: string, action: () => string | Promise<string>) => {
     const go = async () => {
@@ -39,12 +43,24 @@ export function ActivityDevControl() {
     void go();
   };
 
+  // Start and Update read the partner's real content, so they need the signed-in pair. Without one
+  // there is nothing real to show and the buttons would only ever produce the placeholder.
+  const paired = coupleId !== null && userId !== null;
+
   return (
     <View style={styles.panel}>
       <Text style={styles.heading}>DEV ONLY — Live Activity</Text>
       <View style={styles.row}>
-        <DevButton label="Start" onPress={() => run('start', devStartActivity)} />
-        <DevButton label="Update" onPress={() => run('update', devUpdateActivity)} />
+        <DevButton
+          label="Start"
+          disabled={!paired}
+          onPress={() => run('start', () => devStartActivity(coupleId!, userId!))}
+        />
+        <DevButton
+          label="Update"
+          disabled={!paired}
+          onPress={() => run('update', () => devUpdateActivity(coupleId!, userId!))}
+        />
         <DevButton label="End" onPress={() => run('end', devEndActivity)} />
       </View>
       <Text style={styles.status} testID="activity-dev-status">
@@ -54,15 +70,28 @@ export function ActivityDevControl() {
   );
 }
 
-function DevButton({ label, onPress }: { label: string; onPress: () => void }) {
+function DevButton({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       // Named for UI automation: `tools/widget-shot/` taps by accessibility label.
       accessibilityLabel={`Live Activity ${label}`}
       testID={`activity-dev-${label.toLowerCase()}`}
-      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.buttonPressed,
+        disabled && styles.buttonDisabled,
+      ]}>
       <Text style={styles.buttonLabel}>{label}</Text>
     </Pressable>
   );
@@ -88,6 +117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonPressed: { backgroundColor: '#C9A800' },
+  buttonDisabled: { opacity: 0.35 },
   buttonLabel: { color: '#000000', fontSize: 14, fontWeight: '700' },
   status: { color: '#FFFFFF', fontSize: 11 },
 });

@@ -1,23 +1,29 @@
 /**
- * Canned start / update / end actions for driving the Live Activity by hand on a device.
+ * Start / update / end the real Live Activity by hand, for driving it on a device.
  *
- * These exist so the activity can be exercised end to end before push-to-start and the media
- * pipeline are wired: no partner, no push, no Supabase row required. They are plain zero-argument
- * functions rather than inline handlers so the same three actions can also be fired from a deep
- * link or a test harness, not just from the button on the home screen.
+ * These go through the same `service.ts` path the product uses — same stack selection, same App
+ * Group download, same content state — so what appears on the lock screen is the real thing, not a
+ * mock. The only concession is a fallback: when the partner has nothing waiting (unpaired test
+ * device, empty account) there is no content to show, and an experiment that needs *something*
+ * visible would otherwise be blocked, so a placeholder text state is started instead. The status
+ * string says which of the two happened, so a screenshot is never ambiguous.
  *
- * Each returns a short human-readable result for on-screen display — Metro's console frequently
- * doesn't stream in this setup (see CLAUDE.md), so the screen is the log that can be screenshotted.
+ * They are plain functions rather than inline handlers so the same three actions can also be fired
+ * from a deep link or a test harness, not just from the button on the home screen. Each returns a
+ * short human-readable result: Metro's console frequently doesn't stream in this setup (CLAUDE.md),
+ * so the screen is the log that can be screenshotted.
  */
 
+import { makeActivityContentState } from '@/domain/activity/content-state';
+import { updateBundlesActivity, startBundlesActivity } from '@/domain/activity/live-activity';
 import {
-  endBundlesActivity,
-  startBundlesActivity,
-  updateBundlesActivity,
-} from '@/domain/activity/live-activity';
+  endPartnerActivity,
+  resolveActivityImage,
+  startPartnerActivity,
+} from '@/domain/activity/service';
 import type { BundlesActivityContentState } from '@/domain/activity/types';
 
-/** Counts updates within one activity so each update changes the title *visibly*. */
+/** Counts placeholder updates so each one changes the title *visibly*. */
 let updateCount = 0;
 
 /** `HH:MM:SS`, without depending on Intl being present in the JS engine. */
@@ -25,35 +31,48 @@ function clock(): string {
   return new Date().toTimeString().slice(0, 8);
 }
 
-function sampleState(title: string, subtitle: string): BundlesActivityContentState {
-  return {
+/** Text-only stand-in for when there is genuinely no partner content to show. */
+function placeholderState(title: string, subtitle: string): BundlesActivityContentState {
+  return makeActivityContentState({
     kind: 'photo',
     title,
     subtitle,
-    // Text-only for this spike: images ride through the App Group and aren't wired up yet.
     imageFile: null,
     deepLink: 'bundles://media/dev',
     sentAt: Date.now(),
-  };
+  });
 }
 
-/** Start an activity showing a fixed title. Throws (already logged) if ActivityKit refuses. */
-export function devStartActivity(): string {
+/** Start on the partner's real top item, or a placeholder when there isn't one. */
+export async function devStartActivity(coupleId: string, userId: string): Promise<string> {
   updateCount = 0;
-  startBundlesActivity(sampleState('Bundles dev activity', `started ${clock()}`));
-  return `start OK ${clock()}`;
+  const state = await startPartnerActivity(coupleId, userId);
+  if (state) {
+    return `start OK ${clock()} — ${state.kind}${state.imageFile ? ' +image' : ' (no image)'}`;
+  }
+  startBundlesActivity(placeholderState('Bundles dev activity', `started ${clock()}`));
+  return `start OK ${clock()} — placeholder (nothing from partner)`;
 }
 
-/** Change the title, so a live change on the lock screen proves updates are landing. */
-export async function devUpdateActivity(): Promise<string> {
+/**
+ * Re-read the stack and push it into the running activity, which is the real update path. Falls
+ * back to a visibly-changing placeholder when there is no partner content, and when the real state
+ * is unchanged since the last push — `resolveActivityImage` suppresses identical updates, and a
+ * button that appears to do nothing is exactly the ambiguity this control exists to remove.
+ */
+export async function devUpdateActivity(coupleId: string, userId: string): Promise<string> {
+  const state = await resolveActivityImage(coupleId, userId);
+  if (state) {
+    return `update OK ${clock()} — ${state.kind}${state.imageFile ? ' +image' : ' (no image)'}`;
+  }
   updateCount += 1;
-  await updateBundlesActivity(sampleState(`Dev update #${updateCount}`, `at ${clock()}`));
-  return `update #${updateCount} OK ${clock()}`;
+  await updateBundlesActivity(placeholderState(`Dev update #${updateCount}`, `at ${clock()}`));
+  return `update #${updateCount} OK ${clock()} — placeholder (no change from partner)`;
 }
 
-/** End the activity and dismiss it immediately. */
+/** End the activity, dismiss it immediately, and retire its row. */
 export async function devEndActivity(): Promise<string> {
-  await endBundlesActivity();
+  await endPartnerActivity();
   updateCount = 0;
   return `end OK ${clock()}`;
 }
