@@ -183,6 +183,30 @@ describe('resolving a filename back to a URI for the layout', () => {
   it('leaves a text-only frame text-only', () => {
     expect(toActivityProps({ ...state, imageFile: null }, dir).imageFile).toBeNull();
   });
+
+  /**
+   * Load-bearing for the native patch, not just for the UI: `patches/expo-widgets+57.0.6.patch`
+   * reads `props.deepLink` in Swift on every frame and applies it as the activity's `widgetURL`.
+   * Drop the field here and the Lock Screen tap silently goes back to opening the app root — the
+   * exact defect 5ee973d fixed for the home-screen widget.
+   */
+  it('carries deepLink into the props the native side reads for the tap target', () => {
+    expect(toActivityProps(state, dir).deepLink).toBe('bundles://media/photo-1');
+    expect(toActivityProps({ ...state, imageFile: null }, null).deepLink).toBe(
+      'bundles://media/photo-1',
+    );
+  });
+
+  it('keeps every deep link the stack can produce intact through the props conversion', () => {
+    const links = [
+      'bundles://media/photo-1',
+      'bundles://draw?base=drawing-1',
+      'bundles://music',
+    ];
+    for (const deepLink of links) {
+      expect(toActivityProps({ ...state, deepLink }, dir).deepLink).toBe(deepLink);
+    }
+  });
 });
 
 describe('activityContentStateFor', () => {

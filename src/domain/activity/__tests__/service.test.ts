@@ -221,6 +221,29 @@ describe('onActivityTokenReceived', () => {
   });
 });
 
+/**
+ * A device where the token event never fires — push notifications off, Live Activities disabled,
+ * iOS below 17.2 — gets no `activityId`, and therefore no `live_activity_instances` row. That is
+ * accepted, not designed around: the activity still runs and still renders. What must not happen is
+ * a throw, so the missing row degrades into silence rather than a broken screen.
+ */
+describe('when no push token event ever arrives', () => {
+  it('starts, updates and ends without a single database write', async () => {
+    await startPartnerActivity('couple-1', 'user-a');
+    mockStack.present = ['drawing'];
+    mockStack.imageFile = 'file:///AppGroup/ABC/ExpoWidgets/drawing-1.jpg';
+    await resolveActivityImage('couple-1', 'user-a');
+    await endPartnerActivity();
+
+    expect(mockNative.starts).toHaveLength(1);
+    expect(mockNative.updates).toHaveLength(1);
+    expect(mockNative.ends).toBe(1);
+    expect(mockRepo.updateTokens).toHaveLength(0);
+    expect(mockRepo.starts).toHaveLength(0);
+    expect(mockRepo.ends).toHaveLength(0);
+  });
+});
+
 describe('endPartnerActivity', () => {
   it('ends the activity and retires the row once the id is known', async () => {
     await onActivityTokenReceived({ activityId: 'activity-1', pushToken: 'tok' });

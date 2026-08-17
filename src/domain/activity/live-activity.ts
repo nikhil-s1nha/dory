@@ -81,9 +81,12 @@ export function getRunningActivities(): Activity[] {
  * false (Settings › Bundles › Live Activities, off for some users) and `StartLiveActivityException`
  * for anything ActivityKit rejects.
  *
- * The `url` argument becomes the activity's `widgetURL`, so tapping the Dynamic Island opens the
- * same deep link the widget uses. Note it is stored **per activity name at start time** and is not
- * re-read on update — see the note in `use-live-activity.ts`.
+ * The `url` argument is now only a fallback. Upstream stored it per activity *name* at start time
+ * and applied it to the Dynamic Island alone, so the link could not follow the content, the Lock
+ * Screen banner had none at all, and a push-started activity never got one. Our
+ * `patches/expo-widgets+57.0.6.patch` makes the native side read `deepLink` straight out of the
+ * props on every frame instead — which is why `deepLink` must stay in the props `toActivityProps`
+ * produces, on every start and every update.
  */
 export function startBundlesActivity(state: BundlesActivityContentState): Activity {
   assertWithinContentStateBudget(state);

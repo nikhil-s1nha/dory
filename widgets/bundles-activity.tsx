@@ -32,6 +32,11 @@ import type { BundlesActivityProps } from '../src/domain/activity/content-state'
  * Visual language is the home-screen widget's, so the two read as one product: black ground, white
  * title, `#AEAEB2` second line, the image filling a rounded square. Where there is no image, it
  * falls back to the same SF Symbols the home screen's buttons use.
+ *
+ * Tapping opens `deepLink`. No `widgetURL` modifier appears below, because a Live Activity's link is
+ * set on the presentation rather than on a node: `patches/expo-widgets+57.0.6.patch` reads
+ * `props.deepLink` in Swift and applies `.widgetURL()` to the banner and the Dynamic Island alike.
+ * That field must therefore survive into these props — see `toActivityProps`.
  */
 const BundlesActivity = (
   props: BundlesActivityProps,
