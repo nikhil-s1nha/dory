@@ -266,8 +266,66 @@ returned `403 BadEnvironmentKeyInToken` on production and `400 BadDeviceToken` o
 probe run also established that **APNs validates the device token before the topic, the push type
 and the body** — a stripped payload, a 5,212-byte payload, a foreign topic and a wrong push type all
 returned an identical `BadDeviceToken`. So nothing in the envelope above is *confirmed* by a probe
-without a real device token; it is only un-refuted. Treat the topic, the push type, `attributes: {}`
-and the stringified `props` as unproven until they run against real hardware.
+without a real device token; it is only un-refuted.
+
+### ⚠️ What a 200 from APNs does and does not prove (measured 2026-08-23)
+
+The paragraph above was right that a `BadDeviceToken` proves nothing about the envelope. The
+conclusion drawn from it elsewhere — that a **200** for a *real* token therefore confirms the whole
+envelope — is **wrong**, and re-measuring falsified it. Every request below used the real registered
+push-to-start token and the sandbox key, one field changed at a time
+(`tools/live-activity-probe/apns-envelope.mjs`):
+
+| mutation | APNs |
+|---|---|
+| the envelope above, unchanged | `200`, empty body |
+| `attributes` omitted | `200` |
+| `content-state.props` sent as a nested object | `200` |
+| `attributes-type: "BundlesActivity"` (the wrong guess) | `200` |
+| `alert` omitted | `200` |
+| `props` padded past 4 KB | `200` |
+| `apns-topic: com.nikhilsinha.bundles` | `400 {"reason":"DeviceTokenNotForTopic"}` |
+| `apns-push-type: alert` | `400 {"reason":"InvalidPushType"}` |
+
+So a 200 confirms the **device token, the topic and the push type** — those three are now verified by
+observation. It says nothing about `attributes-type`, `attributes: {}`, the `alert`, or `props`
+being a string: APNs does not parse the `aps` body for a Live Activity, ActivityKit does, on the
+device, and it drops what it cannot decode with nothing logged anywhere. **Those four remain
+unproven until a Live Activity is photographed on the phone.**
+
+### The APNs payload ceiling is 5,120 bytes, not 4,096 (measured 2026-08-23)
+
+Bisected against the real gateway with a real token
+(`tools/live-activity-probe/apns-size-limit.mjs`): **5,120 bytes is accepted (200), 5,121 is
+refused (`413 {"reason":"PayloadTooLarge"}`)**. ActivityKit's own content-state limit is 4 KB. The
+gap between those two numbers is a silent-failure window — a payload in it is accepted by Apple,
+delivered to the phone, and discarded by ActivityKit with no error anywhere.
+
+`notify-activity` therefore caps its own content state (`CONTENT_STATE_MAX_BYTES`, mirroring
+`src/domain/activity/content-state.ts`). It previously did not, and the defect was reachable: the
+title is `${profiles.display_name} sent you a photo`, `display_name` is user-controlled and has no
+length limit in 0001, and a 6,000-character one made the live function answer
+`{"event":"start","sent":0,"failed":1,"pruned":0}` — a 413 from APNs. A display name a little
+shorter would have produced a 200 and a lock screen that stayed empty.
+
+### The full key × gateway matrix, re-measured 2026-08-23
+
+Both keys, both gateways, same payload, synthetic device token
+(`tools/live-activity-probe/apns-cross-env.mjs`) — the 403 arrives *before* the device token is
+looked at, which is why a synthetic one suffices:
+
+```
+key=sandbox    kid=79DA5Q3X2T  gateway=sandbox     HTTP 400 {"reason":"BadDeviceToken"}
+key=sandbox    kid=79DA5Q3X2T  gateway=production  HTTP 403 {"reason":"BadEnvironmentKeyInToken"}
+key=production kid=8323H4JG5F  gateway=sandbox     HTTP 403 {"reason":"BadEnvironmentKeyInToken"}
+key=production kid=8323H4JG5F  gateway=production  HTTP 400 {"reason":"BadDeviceToken"}
+```
+
+`BadDeviceToken` on the matched pairs is the *success* signal here: it means the provider key was
+accepted and APNs got as far as the token. This is also how a production row can be verified through
+the Edge Function without a production device — a synthetic production token comes back
+`400 BadDeviceToken` and is **pruned**, whereas a mispaired key would come back 403 and be counted
+`failed`.
 
 ## Ordering problem, and who solves it
 

@@ -2,6 +2,51 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Live Activity backend, verified server-side (2026-08-23)
+
+A test pass over everything in the push/backend stack that can be settled without owning the phone's
+screen. Trunk 267 → 307 tests. Probes live in `tools/live-activity-probe/`; each one prints the raw
+APNs status and body it measured, so a claim here can be re-run rather than believed.
+
+### Found by doing
+- 🔴 **A 200 from APNs does not validate the Live Activity envelope.** One field changed at a time
+  against the *real* registered token: `attributes` omitted, `alert` omitted, `props` sent as a
+  nested object, and `attributes-type: "BundlesActivity"` **all returned 200**. A wrong topic
+  returned `400 DeviceTokenNotForTopic` and a wrong push type `400 InvalidPushType`. So a 200 proves
+  the device token, the topic and the push type — and nothing about the body, which ActivityKit
+  parses on the device. **This falsifies the claim in the previous CHANGELOG entry and in PLAN.md**
+  that the earlier `sent:1` confirmed all five envelope properties; both are corrected.
+- 🔴 **APNs accepts `liveactivity` payloads up to 5,120 bytes, ActivityKit accepts 4,096.** Bisected
+  against the real gateway: 5,120 → 200, 5,121 → `413 PayloadTooLarge`. Anything the server emits in
+  that 1 KB window is accepted by Apple, delivered, and dropped on the phone with nothing logged.
+  `notify-activity` had **no server-side cap** — proven live, not inferred: a 6,000-character
+  `display_name` (user-controlled, unbounded in 0001) made the deployed function answer
+  `{"event":"start","sent":0,"failed":1,"pruned":0}`. Now capped, mirroring the client's constants.
+- The full key × gateway matrix re-measured, both directions, with real response bodies:
+  matched pairs `400 BadDeviceToken`, crossed pairs `403 BadEnvironmentKeyInToken`. The 403 arrives
+  *before* the device token is examined, which is why a synthetic token is enough to measure it.
+
+### Verified
+- **Key selection** — 40 tests that load `notify-activity/index.ts` itself (babel-stripped, ambients
+  replaced by spies) and assert the URL it posted to, the `kid` in the provider JWT it signed with,
+  and the exact bytes it serialized. Covers per-row pairing when both environments appear in one
+  request, the per-environment JWT cache, `APNS_FORCE_ENVIRONMENT`, the start/update/end envelopes,
+  the prune rules, and the cross-gateway retry swapping the key with the host.
+- **Live, against the cloud project**: registration upsert (one row, second value wins); a start with
+  a real sandbox token *and* a synthetic **production** token →
+  `{"event":"start","sent":1,"failed":0,"pruned":1}`, the `pruned` proving the production key and
+  the production gateway moved together; the synthetic row gone afterwards and the real one intact;
+  `update` and `end` both `pruned:1` with `ended_at` stamped and `update_token` nulled.
+- **RLS, black-box**: 11/11 through PostgREST as the two seeded accounts — owner sees their own,
+  partner sees `[]` on both tables, partner's update and delete of an owner row change nothing,
+  inserting a row owned by someone else is `403 42501`, anonymous sees `[]`.
+
+### Still open
+- `supabase/tests/verify_live_activity_rls_cloud.sql` could **not** be run: the Management API
+  personal access token in `.supabase-access-token` now returns `401 Unauthorized`. The role-switching
+  half of the RLS check and the device-handover trigger assertions are therefore unre-verified since
+  2026-08-16, and the content-state cap above is **committed but not deployed**.
+
 ## Live Activities + TestFlight infrastructure (2026-08-16)
 
 Built by four parallel agents in separate git worktrees, integrated through one serialised device
