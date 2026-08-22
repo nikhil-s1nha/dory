@@ -96,6 +96,48 @@ type MediaRow = { id: string; couple_id: string; sender_id: string; type: string
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * THE 4 KB CONTENT-STATE CEILING, ENFORCED HERE AND NOT ONLY IN THE CLIENT.
+ *
+ * ActivityKit refuses a content state over 4 KB. **APNs does not** — measured against the real
+ * gateway on 2026-08-23 with a real token: a `liveactivity` payload is accepted (200, empty body)
+ * up to exactly 5,120 bytes and refused with `413 PayloadTooLarge` from 5,121. So a content state
+ * between those two numbers is accepted by Apple, delivered to the phone, and dropped by
+ * ActivityKit with nothing logged anywhere — the failure mode this whole file is written to avoid.
+ *
+ * `src/domain/activity/content-state.ts` caps the states the *app* builds. This path builds its own,
+ * and its only user-controlled input — `profiles.display_name` — has no length limit in the schema
+ * (0001), so a long display name is all it takes. Same constants as the client, deliberately.
+ */
+const CONTENT_STATE_MAX_BYTES = 4096;
+const TITLE_MAX_CHARS = 96;
+const SUBTITLE_MAX_CHARS = 96;
+/** Every string on this path is built from the sender's name, including the required `alert`. */
+const SENDER_NAME_MAX_CHARS = 40;
+
+function utf8Length(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
+/**
+ * Cap both text lines, then keep halving the title until the *serialized* props fit the budget.
+ *
+ * The character caps alone already bound this — every other field is a kind, a null, an epoch and a
+ * deep link built from a uuid — but the budget is a byte budget, and an invariant that holds only
+ * because of arithmetic done in a comment is not an invariant. The loop makes it unconditional.
+ */
+function boundContentState(state: BundlesActivityContentState): BundlesActivityContentState {
+  let bounded: BundlesActivityContentState = {
+    ...state,
+    title: state.title.slice(0, TITLE_MAX_CHARS),
+    subtitle: state.subtitle.slice(0, SUBTITLE_MAX_CHARS),
+  };
+  while (utf8Length(JSON.stringify(bounded)) > CONTENT_STATE_MAX_BYTES && bounded.title.length > 0) {
+    bounded = { ...bounded, title: bounded.title.slice(0, Math.floor(bounded.title.length / 2)) };
+  }
+  return bounded;
+}
+
+/**
  * ONE SIGNING SLOT PER ENVIRONMENT — not one global slot.
  *
  * The project holds two APNs auth keys and **neither is universal**. Proven against real APNs, both
@@ -410,11 +452,12 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .maybeSingle();
     // display_name defaults to '' at signup (0001), so fall back rather than title an activity with
-    // nothing.
-    const senderName = senderProfile?.display_name?.trim() || 'Your partner';
+    // nothing — and cap it, because it is user-controlled, unbounded in the schema, and every string
+    // below is built from it (see CONTENT_STATE_MAX_BYTES).
+    const senderName = (senderProfile?.display_name?.trim() || 'Your partner').slice(0, SENDER_NAME_MAX_CHARS);
     const mediaType = item.type as MediaType;
 
-    contentState = {
+    contentState = boundContentState({
       kind: mediaType,
       title: `${senderName} ${alertBody(mediaType)}`,
       subtitle: '',
@@ -425,7 +468,7 @@ Deno.serve(async (req) => {
       imageFile: null,
       deepLink: deepLinkFor(mediaType, item.id),
       sentAt: Date.parse(item.created_at) || Date.now(),
-    };
+    });
     alert = { title: senderName, body: alertBody(mediaType) };
   }
 
