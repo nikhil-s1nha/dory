@@ -15,6 +15,7 @@
  */
 
 import { makeActivityContentState } from '@/domain/activity/content-state';
+import { activityImageDebug } from '@/lib/widget-sync';
 import { updateBundlesActivity, startBundlesActivity } from '@/domain/activity/live-activity';
 import {
   endPartnerActivity,
@@ -43,12 +44,26 @@ function placeholderState(title: string, subtitle: string): BundlesActivityConte
   });
 }
 
+/**
+ * The image half of the status line: whether one is attached, its App Group filename, and the
+ * resize that produced it.
+ *
+ * The dimensions are the point of it. An image bigger than the presentation drawing it is rendered
+ * by ActivityKit as a flat grey box — a successful start with a broken picture — so `+image` alone
+ * once "passed" while nothing was visible. Printing `600x600 -> 180x180` puts the number that
+ * actually decides the render on a surface a screenshot can read.
+ */
+function describeImage(imageFile: string | null): string {
+  if (!imageFile) return ' (no image)';
+  return ` +image ${imageFile} [${activityImageDebug() ?? 'no resize recorded'}]`;
+}
+
 /** Start on the partner's real top item, or a placeholder when there isn't one. */
 export async function devStartActivity(coupleId: string, userId: string): Promise<string> {
   updateCount = 0;
   const state = await startPartnerActivity(coupleId, userId);
   if (state) {
-    return `start OK ${clock()} — ${state.kind}${state.imageFile ? ' +image' : ' (no image)'}`;
+    return `start OK ${clock()} — ${state.kind}${describeImage(state.imageFile)}`;
   }
   startBundlesActivity(placeholderState('Bundles dev activity', `started ${clock()}`));
   return `start OK ${clock()} — placeholder (nothing from partner)`;
@@ -63,7 +78,7 @@ export async function devStartActivity(coupleId: string, userId: string): Promis
 export async function devUpdateActivity(coupleId: string, userId: string): Promise<string> {
   const state = await resolveActivityImage(coupleId, userId);
   if (state) {
-    return `update OK ${clock()} — ${state.kind}${state.imageFile ? ' +image' : ' (no image)'}`;
+    return `update OK ${clock()} — ${state.kind}${describeImage(state.imageFile)}`;
   }
   updateCount += 1;
   await updateBundlesActivity(placeholderState(`Dev update #${updateCount}`, `at ${clock()}`));

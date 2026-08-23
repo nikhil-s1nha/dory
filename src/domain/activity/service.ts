@@ -9,10 +9,15 @@
  * `resolveActivityImage` is that second half.
  *
  * Image downloading is **not** reimplemented here. `syncWidgetOnOpen`'s `downloadToAppGroup` already
- * does the downscale-to-600px, staging-file and in-flight-dedup work that took a long time to get
- * right, and it is reached through the exported `buildProps` — so the activity and the widget share
- * one download and one file on disk. (`downloadToAppGroup` itself is module-private; going through
- * `buildProps` reuses it without editing that file.)
+ * does the staging-file and in-flight-dedup work that took a long time to get right, and it is
+ * reached through the exported `buildProps` — so the activity and the widget share one download.
+ * (`downloadToAppGroup` itself is module-private; going through `buildProps` reuses it without
+ * editing that file.)
+ *
+ * They do **not** share the resulting file. ActivityKit refuses to draw an image larger than the
+ * presentation showing it, and the widget's 600px derivative is far larger than the activity's
+ * biggest 60pt frame — so the activity gets a second, smaller copy via `deriveActivityImage`. See
+ * `activityImageFile` below for what that silently cost us before it existed.
  *
  * Rotation is deliberately absent. The activity shows the **top-priority** present item and stays
  * there; whether a running activity should cycle is a separate decision, pending the device
@@ -39,7 +44,7 @@ import {
 } from '@/domain/activity/repository';
 import type { BundlesActivityContentState } from '@/domain/activity/types';
 import { itemAtCursor, type WidgetContentType } from '@/domain/widget/stack';
-import { buildProps, loadStackSnapshot } from '@/lib/widget-sync';
+import { buildProps, deriveActivityImage, loadStackSnapshot } from '@/lib/widget-sync';
 
 /** What the partner currently has waiting, resolved into something the activity can render. */
 export interface ActivityCandidate {
@@ -91,15 +96,38 @@ export async function buildPartnerActivityState(
   const item = itemAtCursor(present, 0);
   if (!item) return { item: null, state: null, mediaId: null };
 
-  // Downloads (and downscales) into the App Group as a side effect — the file the activity reads.
+  // Downloads (and downscales to 600px) into the App Group as a side effect — the file the *widget*
+  // reads. The activity cannot use it directly; see `activityImageFile` below.
   const props = await buildProps(item, ctx);
-  const filename = activityImageFilename(props.imageFile);
+  const filename = activityImageFilename(await activityImageFile(props.imageFile));
 
   return {
     item,
     state: activityContentStateFor(item, ctx, filename),
     mediaId: activityMediaId(item, ctx),
   };
+}
+
+/**
+ * The App Group file the *activity* should reference, given the one the widget uses.
+ *
+ * ActivityKit will not draw an image asset larger than the presentation that renders it — it
+ * substitutes a flat grey box, silently, on a `start` that otherwise succeeds. The widget's 600px
+ * derivative trips that rule in every Live Activity presentation we draw, so the activity gets its
+ * own, smaller copy (`deriveActivityImage`, and `ACTIVITY_RENDER_MAX_DIMENSION` for the numbers).
+ *
+ * A failure here falls back to **null**, not to the widget's file: null renders the SF Symbol
+ * fallback, which is correct and legible, whereas the over-sized file renders the grey box this
+ * whole path exists to eliminate. Losing the picture beats showing a placeholder that looks broken.
+ */
+async function activityImageFile(widgetImage: string | undefined): Promise<string | null> {
+  if (!widgetImage) return null;
+  try {
+    return await deriveActivityImage(widgetImage);
+  } catch (error) {
+    console.log('[live-activity] activity image derivation FAILED —', describeActivityError(error));
+    return null;
+  }
 }
 
 /**

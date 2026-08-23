@@ -260,8 +260,28 @@ render. Both of these masked a *working* fix during the containerBackground debu
 
 - The APNs `.p8` auth key downloads **exactly once, ever**. It lives at gitignored `.apns-key.p8`;
   the Key ID is recoverable from the original filename (`AuthKey_<KEYID>.p8`).
-- One key is account-wide, never expires, and covers both sandbox and production. Builds installed
-  this way register against **sandbox** APNs.
+- **A key is not necessarily account-wide.** This section used to claim one key "covers both sandbox
+  and production." That is false, and believing it nearly shipped a TestFlight build with every push
+  silently dead. When you create a key, Apple offers an environment restriction, and a restricted key
+  returns `403 InvalidProviderToken` against the other gateway — not a warning, a hard rejection.
+  This account now holds two, restricted in *opposite* directions:
+
+  | Key | Environment | Gateway it works against |
+  |---|---|---|
+  | the original `.apns-key.p8` | Sandbox only | `api.sandbox.push.apple.com` |
+  | `8323H4JG5F` | Production only | `api.push.apple.com` |
+
+  Apple caps you at two keys per account, so this pair cannot simply be replaced with one unrestricted
+  key without revoking one first. `supabase/functions/notify-activity/` therefore holds both and picks
+  per request from the token row's `environment` column, with a per-key JWT cache.
+- Builds installed by `expo run:ios` — Debug **or** Release — register against **sandbox** APNs. A
+  TestFlight or App Store build registers against **production**. This is why the bug above was
+  invisible: every install to date was sandbox, so the production key was never exercised.
+- A `400 BadDeviceToken` says nothing about the rest of your request. APNs validates the device token
+  *before* the topic, push type, and body, so a malformed payload and a correct one produce the same
+  response against a stale token. A control probe in this project confirmed it: a stripped body, an
+  oversized body, a foreign topic, and a wrong push type all returned identical `BadDeviceToken`.
+  Never read that status as evidence the envelope is right.
 - The Push Notifications capability belongs **only on the main app target**, not the widget
   extension. The extension needs App Groups alone — it reads the shared container and never receives
   a push. Its absence under `ExpoWidgetsTarget` is correct by design, not a misconfiguration.

@@ -39,11 +39,22 @@ const mockStack = {
   ctx: null as StackContext | null,
   /** What `buildProps` hands back — the App Group URI `downloadToAppGroup` wrote. */
   imageFile: 'file:///AppGroup/ABC/ExpoWidgets/photo-1.jpg' as string | undefined,
+  /** Makes `deriveActivityImage` fail, to check the activity falls back to the text-only frame. */
+  deriveThrows: false,
 };
 
 jest.mock('@/lib/widget-sync', () => ({
   loadStackSnapshot: async () => ({ ctx: mockStack.ctx, present: mockStack.present }),
   buildProps: async (item: string) => ({ kind: item, imageFile: mockStack.imageFile }),
+  // The activity never references the widget's own file — see `activityImageFile` in service.ts.
+  // The mock reproduces the real naming (`activity-` prefixed, same directory) so the assertions
+  // below are about the filename that actually ships, and it can be made to throw to check the
+  // fallback.
+  deriveActivityImage: async (uri: string) => {
+    if (mockStack.deriveThrows) throw new Error('resize failed');
+    const parts = uri.split('/');
+    return [...parts.slice(0, -1), `activity-${parts[parts.length - 1]}`].join('/');
+  },
 }));
 
 jest.mock('@/domain/activity/live-activity', () => ({
@@ -96,6 +107,7 @@ beforeEach(() => {
   mockRepo.endError = null;
   mockStack.present = ['photo', 'drawing', 'music'];
   mockStack.imageFile = 'file:///AppGroup/ABC/ExpoWidgets/photo-1.jpg';
+  mockStack.deriveThrows = false;
   mockStack.ctx = {
     latestPhoto: photo,
     latestDrawing: drawing,
@@ -126,15 +138,33 @@ describe('buildPartnerActivityState', () => {
     expect(state?.deepLink).toBe('bundles://draw?base=drawing-1');
   });
 
-  it('reduces the App Group URI to the filename the contract puts on the wire', async () => {
+  /**
+   * The activity references its **own** derivative, never the widget's file. ActivityKit draws a
+   * flat grey box instead of any image asset bigger than the presentation showing it, and the
+   * widget's copy is 600px against a 60pt frame — which is exactly how this shipped broken, with a
+   * successful `start` and no error anywhere. Asserting the `activity-` prefix is what keeps a
+   * future refactor from quietly handing the widget's filename back.
+   */
+  it('puts the activity-sized derivative on the wire, not the widget file', async () => {
     const { state } = await buildPartnerActivityState('couple-1', 'user-a');
-    expect(state?.imageFile).toBe('photo-1.jpg');
+    expect(state?.imageFile).toBe('activity-photo-1.jpg');
   });
 
   it('is a text-only state when there is no image for the item', async () => {
     mockStack.imageFile = undefined;
     const { state } = await buildPartnerActivityState('couple-1', 'user-a');
     expect(state?.imageFile).toBeNull();
+  });
+
+  /**
+   * A failed resize falls back to the SF Symbol, not to the widget's over-sized file: the symbol
+   * renders correctly and the over-sized file renders the grey box.
+   */
+  it('falls back to a text-only state when the derivative cannot be written', async () => {
+    mockStack.deriveThrows = true;
+    const { state } = await buildPartnerActivityState('couple-1', 'user-a');
+    expect(state?.imageFile).toBeNull();
+    expect(state?.title).toBe('Alex sent you a photo');
   });
 
   it('reports the media_items row for the instance table', async () => {
@@ -157,7 +187,7 @@ describe('startPartnerActivity', () => {
   it('starts with the real content, image included', async () => {
     const state = await startPartnerActivity('couple-1', 'user-a');
     expect(mockNative.starts).toHaveLength(1);
-    expect(state?.imageFile).toBe('photo-1.jpg');
+    expect(state?.imageFile).toBe('activity-photo-1.jpg');
   });
 
   it('starts nothing when there is nothing waiting', async () => {
@@ -171,7 +201,7 @@ describe('resolveActivityImage — the push-to-start ordering fix', () => {
   it('gives a running push-started activity its image', async () => {
     // The push could only carry a text-only state: the image was not in the App Group yet.
     const state = await resolveActivityImage('couple-1', 'user-a');
-    expect(state?.imageFile).toBe('photo-1.jpg');
+    expect(state?.imageFile).toBe('activity-photo-1.jpg');
     expect(mockNative.updates).toHaveLength(1);
   });
 

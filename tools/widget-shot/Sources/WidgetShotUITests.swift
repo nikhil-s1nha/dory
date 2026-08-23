@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 /// Photographs the iPhone's home screen so the Bundles widget can be verified without a human
 /// looking at the phone.
@@ -174,6 +175,169 @@ final class WidgetShotUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 4)
       attach(XCUIScreen.main.screenshot(), named: "after-end-island")
     }
+  }
+
+  /// Prove the Live Activity actually renders the partner's picture — status string *and* pixels.
+  ///
+  /// This exists because `testLiveActivityVisibility` passed for a week while the image was a flat
+  /// grey box: every assertion it made was about text, so nothing could fail. Two checks close that,
+  /// and they fail for different reasons, which is the point:
+  ///
+  /// 1. **The status line**, read out of the accessibility tree rather than squinted at in a
+  ///    screenshot (it sits below the tab bar and gets cropped). `— photo +image …` means an
+  ///    absolute `file://` URI reached the layout; `(no image)` means the app-side resolution
+  ///    failed and the layout is innocent. That one string splits the whole diagnosis in two.
+  /// 2. **The pixels** in the expanded Dynamic Island's leading slot. ActivityKit draws a flat grey
+  ///    box for an image asset bigger than the presentation showing it — a successful `start` with
+  ///    no picture and no error anywhere. Grey is achromatic, a photo is not, so requiring some
+  ///    colour in that slot is a check the grey-box bug fails and a real render passes. Measured on
+  ///    the broken build, that region scored max-chroma 0.
+  func testLiveActivityImageRenders() throws {
+    let bundles = XCUIApplication(bundleIdentifier: "com.nikhilsinha.bundles")
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+
+    bundles.terminate()
+    Thread.sleep(forTimeInterval: 2)
+    bundles.launch()
+    Thread.sleep(forTimeInterval: 10)
+
+    bundles.swipeUp()
+    Thread.sleep(forTimeInterval: 1)
+    bundles.swipeUp()
+    Thread.sleep(forTimeInterval: 1)
+
+    let start = bundles.descendants(matching: .any)["activity-dev-start"]
+    guard start.waitForExistence(timeout: 20) else {
+      attach(XCUIScreen.main.screenshot(), named: "FAILED-no-dev-control")
+      XCTFail("dev control not found — is SHOW_ACTIVITY_DEV_CONTROL true in this build?")
+      return
+    }
+
+    // Clear anything a previous run left running. ActivityKit caps concurrent activities per app,
+    // and once that cap is hit `start` throws `ERR_START_LIVE_ACTIVITY` — which reads exactly like
+    // "the feature is broken" and is really just an un-cleaned-up device.
+    let end = bundles.descendants(matching: .any)["activity-dev-end"]
+    if end.waitForExistence(timeout: 10) {
+      for _ in 0..<6 {
+        end.tap()
+        Thread.sleep(forTimeInterval: 1.5)
+      }
+    }
+
+    start.tap()
+    Thread.sleep(forTimeInterval: 8)
+
+    let statusElement = bundles.descendants(matching: .any)["activity-dev-status"]
+    XCTAssertTrue(statusElement.waitForExistence(timeout: 10), "dev status line not found")
+    let status = statusElement.label
+    let attachment = XCTAttachment(string: status)
+    attachment.name = "activity-dev-status"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    print("ACTIVITY_DEV_STATUS >>> \(status)")
+    attach(XCUIScreen.main.screenshot(), named: "status-in-app")
+
+    XCTAssertTrue(status.hasPrefix("start OK"), "start did not succeed: \(status)")
+    XCTAssertTrue(
+      status.contains("+image"),
+      "the activity started with no image at all — the failure is app-side (resolveActivityImage / "
+        + "widgetsDirectory / the download), not in the layout: \(status)"
+    )
+
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 4)
+    attach(XCUIScreen.main.screenshot(), named: "island-compact")
+
+    // Expanded presentation — a long press on the island. Coordinates, because the island has no
+    // addressable accessibility element of its own.
+    let island = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.022))
+    island.press(forDuration: 1.2)
+    Thread.sleep(forTimeInterval: 3)
+    let expanded = XCUIScreen.main.screenshot()
+    attach(expanded, named: "island-expanded")
+    assertIsAPicture(expanded, region: Self.expandedLeadingSlot, named: "island-expanded-leading")
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 2)
+
+    // The lock screen is not reachable from XCUITest — a UI test cannot lock the device. Notification
+    // Center renders the *same* `banner` presentation, so it is the closest scriptable stand-in, and
+    // the one CLAUDE.md already uses for push verification.
+    let top = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.0))
+    let down = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.7))
+    top.press(forDuration: 0.1, thenDragTo: down)
+    Thread.sleep(forTimeInterval: 3)
+    attach(XCUIScreen.main.screenshot(), named: "notification-center-activity")
+    XCUIDevice.shared.press(.home)
+    Thread.sleep(forTimeInterval: 2)
+  }
+
+  /// The expanded Dynamic Island's leading slot, in fractions of the screen.
+  ///
+  /// Normalised so it survives a different device; measured against the 1206x2622 iPhone 17 capture,
+  /// where the 44pt thumbnail lands entirely inside it with a margin of island-black on every side.
+  private static let expandedLeadingSlot = CGRect(x: 0.08, y: 0.038, width: 0.12, height: 0.047)
+
+  /// Fail unless `region` of `screenshot` contains actual colour, and attach the crop either way.
+  ///
+  /// Chroma — `max(r,g,b) - min(r,g,b)` — is the discriminator because every way this has failed is
+  /// achromatic: ActivityKit's grey placeholder, the island's black ground, an empty slot. A
+  /// photograph of a person is not. On the broken build this region scored max 0 / mean 0.0.
+  private func assertIsAPicture(_ screenshot: XCUIScreenshot, region: CGRect, named name: String) {
+    guard let cgImage = screenshot.image.cgImage else {
+      XCTFail("\(name): screenshot had no CGImage")
+      return
+    }
+    let width = max(1, Int(region.width * CGFloat(cgImage.width)))
+    let height = max(1, Int(region.height * CGFloat(cgImage.height)))
+    let cropRect = CGRect(
+      x: Int(region.minX * CGFloat(cgImage.width)),
+      y: Int(region.minY * CGFloat(cgImage.height)),
+      width: width,
+      height: height
+    )
+    guard let cropped = cgImage.cropping(to: cropRect) else {
+      XCTFail("\(name): could not crop \(cropRect) out of \(cgImage.width)x\(cgImage.height)")
+      return
+    }
+
+    let crop = XCTAttachment(image: UIImage(cgImage: cropped))
+    crop.name = name
+    crop.lifetime = .keepAlways
+    add(crop)
+
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    guard let context = CGContext(
+      data: &pixels,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: width * 4,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+      XCTFail("\(name): could not build a bitmap context")
+      return
+    }
+    context.draw(cropped, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+    var total = 0
+    var peak = 0
+    for index in stride(from: 0, to: width * height * 4, by: 4) {
+      let r = Int(pixels[index]), g = Int(pixels[index + 1]), b = Int(pixels[index + 2])
+      let chroma = max(r, max(g, b)) - min(r, min(g, b))
+      total += chroma
+      peak = max(peak, chroma)
+    }
+    let mean = Double(total) / Double(width * height)
+    print("PIXELS \(name) >>> maxChroma=\(peak) meanChroma=\(String(format: "%.2f", mean))")
+
+    XCTAssertGreaterThan(
+      peak, 25,
+      "\(name) is achromatic (maxChroma \(peak), mean \(mean)) — ActivityKit is drawing its grey "
+        + "placeholder instead of the image. The usual cause is an image asset larger than the "
+        + "presentation drawing it; see ACTIVITY_RENDER_MAX_DIMENSION."
+    )
+    XCTAssertGreaterThan(mean, 4.0, "\(name) has almost no colour anywhere (mean chroma \(mean))")
   }
 
   /// Capture every home-screen page.

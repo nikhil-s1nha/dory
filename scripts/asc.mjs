@@ -535,6 +535,58 @@ commands.builds = {
   },
 };
 
+commands['devices'] = {
+  summary: 'List every device registered on the team, with its UDID and status.',
+  async run() {
+    const { items } = await getAll('/v1/devices?limit=200');
+    if (!items.length) {
+      console.log('No devices registered on this team.');
+      return;
+    }
+    for (const d of items) {
+      const a = d.attributes ?? {};
+      console.log(`${(a.status ?? '?').padEnd(8)} ${(a.udid ?? '?').padEnd(42)} ${a.name ?? ''}`);
+    }
+    console.log(`\n${items.length} device(s).`);
+  },
+};
+
+commands['register-device'] = {
+  summary: 'Register a device UDID with the team so builds can install on it.',
+  usage: 'register-device <udid> <name>',
+  async run({ positional }) {
+    const udid = positional[0];
+    const name = positional.slice(1).join(' ');
+    if (!udid || !name) die('Usage: register-device <udid> <name>');
+
+    // Registering an already-known UDID is a 409, which reads as a failure but is the
+    // desired end state. Check first so a re-run is a no-op rather than a scary error.
+    const { items } = await getAll('/v1/devices?limit=200');
+    const existing = items.find((d) => d.attributes?.udid?.toLowerCase() === udid.toLowerCase());
+    if (existing) {
+      const a = existing.attributes ?? {};
+      console.log(`Already registered: ${a.udid} "${a.name}" (${a.status}).`);
+      if (a.status === 'DISABLED') {
+        console.log('It is DISABLED, so profiles will not include it. Re-enable it in the portal:');
+        console.log('  https://developer.apple.com/account/resources/devices/list');
+      }
+      return;
+    }
+
+    const created = await request('POST', '/v1/devices', {
+      data: {
+        type: 'devices',
+        attributes: { udid, name, platform: 'IOS' },
+      },
+    });
+    const a = created?.data?.attributes ?? {};
+    console.log(`Registered ${a.udid ?? udid} as "${a.name ?? name}" (${a.status ?? 'ENABLED'}).`);
+    console.log('\nProvisioning profiles do NOT update themselves. Rebuild with');
+    console.log('  -allowProvisioningUpdates');
+    console.log('so Xcode regenerates them to include this device.');
+  },
+};
+
 commands['next-build-number'] = {
   summary: 'Print one more than the highest build number App Store Connect has seen.',
   async run() {

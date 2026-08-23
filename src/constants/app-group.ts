@@ -49,3 +49,28 @@ export const WIDGET_IMAGE_MAX_DIMENSION = 600;
  * media that is already stored.
  */
 export const WIDGET_RENDER_MAX_DIMENSION = 600;
+
+/**
+ * Hard cap on the long edge of an image handed to the **Live Activity**, in pixels.
+ *
+ * Separate from — and far smaller than — `WIDGET_RENDER_MAX_DIMENSION`, because ActivityKit has a
+ * rule WidgetKit does not: *"The system requires image assets for a Live Activity to use a
+ * resolution that's smaller or equal to the size of the Live Activity presentation for a device. If
+ * you use an image asset that's larger than the size of the Live Activity presentation, the system
+ * might fail to start the Live Activity."* (ActivityKit → Displaying live data with Live Activities.)
+ *
+ * Measured consequence on device: the 600px file the home-screen widget renders perfectly drew as a
+ * **flat grey box** in every Live Activity presentation — compact-leading, expanded-leading and the
+ * lock-screen banner alike. Not the null-image fallback (that path draws an SF Symbol, and it
+ * worked), and not a missing file (the widget was reading the very same file at the same moment).
+ * ActivityKit simply substitutes a placeholder for an over-sized asset, silently, with no log.
+ *
+ * 180px is 60pt at @3x — the largest frame any presentation in `widgets/bundles-activity.tsx`
+ * draws (the banner's 60x60 thumbnail). The Dynamic Island's 44pt, 20pt and 18pt frames are smaller
+ * still. So this is "as big as the biggest thing that draws it", which is exactly what the rule
+ * asks for, and it decodes to ~130KB — trivial against the extension's budget.
+ *
+ * If a presentation ever grows past 60pt, raise this to match it, and re-verify with pixels: a
+ * regression here is invisible to any assertion that only checks text.
+ */
+export const ACTIVITY_RENDER_MAX_DIMENSION = 180;

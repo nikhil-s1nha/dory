@@ -11,7 +11,7 @@ import { Directory, File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { widgetsDirectory } from 'expo-widgets';
 
-import { WIDGET_RENDER_MAX_DIMENSION } from '@/constants/app-group';
+import { ACTIVITY_RENDER_MAX_DIMENSION, WIDGET_RENDER_MAX_DIMENSION } from '@/constants/app-group';
 
 import BundlesWidget, { type BundlesWidgetProps } from '../../widgets/bundles-widget';
 import { fetchPartnerNowPlaying } from '@/domain/spotify/repository';
@@ -25,6 +25,14 @@ const CURSOR_KEY = 'bundles.widget.cursor';
 
 /** What the last downscale produced, surfaced through the widget props for on-device diagnosis. */
 let lastImageDebug: string | undefined;
+
+/** Same idea for the Live Activity derivative, surfaced through the dev control's status line. */
+let lastActivityImageDebug: string | undefined;
+
+/** What `deriveActivityImage` last produced — the only channel that reaches a device screenshot. */
+export function activityImageDebug(): string | undefined {
+  return lastActivityImageDebug;
+}
 
 /** Makes each in-flight download's staging file unique, so concurrent syncs can't collide. */
 let stagingSequence = 0;
@@ -164,6 +172,75 @@ async function downloadToAppGroupUncoordinated(url: string, filename: string): P
   } finally {
     if (!movedIntoPlace && staged.exists) staged.delete();
   }
+}
+
+/**
+ * Write a Live-Activity-sized copy of an image already sitting in the App Group, and return its URI.
+ *
+ * **Why a second file rather than reusing the widget's.** ActivityKit requires an image asset to be
+ * no larger than the presentation that draws it (`ACTIVITY_RENDER_MAX_DIMENSION` carries the quote
+ * and the measurement). The widget's 600px derivative is 3-30x the size of every frame in
+ * `widgets/bundles-activity.tsx`, and ActivityKit's response to that is to draw a flat grey box —
+ * no error, no log, and a perfectly successful `start`. The home-screen widget renders the same
+ * file correctly at the same moment, which is exactly what makes the failure so hard to read.
+ *
+ * Named `activity-<widget filename>` so the two derivatives of one media item sit side by side in
+ * the container and neither can be mistaken for the other. Always regenerated rather than cached on
+ * existence: `album.jpg` keeps one name while its contents change with the track, so an
+ * exists-check would pin the activity to the first album art ever seen.
+ *
+ * Shares `inFlight` with `downloadToAppGroup` (different key, same map) because the activity path
+ * and `useWidgetSync` genuinely overlap on foreground, and two writers racing on one target path is
+ * how this module previously produced `NSFileWriteFileExistsError`.
+ */
+export function deriveActivityImage(sourceUri: string): Promise<string> {
+  const base = sourceUri.split('?')[0].split('#')[0].split('/').pop() ?? '';
+  const filename = `activity-${base}`;
+  const existing = inFlight.get(filename);
+  if (existing) return existing;
+
+  const work = deriveActivityImageUncoordinated(sourceUri, filename).finally(() => {
+    inFlight.delete(filename);
+  });
+  inFlight.set(filename, work);
+  return work;
+}
+
+async function deriveActivityImageUncoordinated(sourceUri: string, filename: string): Promise<string> {
+  const dir = new Directory(widgetsDirectory);
+  dir.create({ intermediates: true, idempotent: true });
+  const target = new File(dir, filename);
+
+  const source = await withTimeout(
+    'activityMeasure',
+    STEP_TIMEOUT_MS,
+    ImageManipulator.manipulate(sourceUri).renderAsync(),
+  );
+  const { width, height } = source;
+
+  // Already inside the budget — hand back the widget's own file rather than re-encoding it. Album
+  // art in particular often arrives small enough, and an upscale would only cost quality.
+  if (Math.max(width, height) <= ACTIVITY_RENDER_MAX_DIMENSION) {
+    lastActivityImageDebug = `${width}x${height} kept`;
+    return sourceUri;
+  }
+
+  const context = ImageManipulator.manipulate(sourceUri);
+  const scaled =
+    width >= height
+      ? context.resize({ width: ACTIVITY_RENDER_MAX_DIMENSION })
+      : context.resize({ height: ACTIVITY_RENDER_MAX_DIMENSION });
+  const rendered = await withTimeout('activityResize', STEP_TIMEOUT_MS, scaled.renderAsync());
+  const saved = await withTimeout(
+    'activityEncode',
+    STEP_TIMEOUT_MS,
+    rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG }),
+  );
+  if (target.exists) target.delete();
+  await new File(saved.uri).move(target);
+
+  lastActivityImageDebug = `${width}x${height} -> ${rendered.width}x${rendered.height}`;
+  return target.uri;
 }
 
 export interface StackContext {
