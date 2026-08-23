@@ -121,14 +121,22 @@ makes "your partner sends a photo and it's on your lock screen" possible at all.
 - The phone registers a **push-to-start token** on launch, with `environment: sandbox` derived from
   the `aps-environment` entitlement (not `__DEV__`, which would report the opposite for a Release
   build installed by Xcode and every TestFlight build).
-- A real start push for that token returned **`{"event":"start","sent":1,"failed":0}`**. Because APNs
-  validates the device token *before* the topic, push type and body (established by a controlled
-  probe — see CHANGELOG), a 200 for a *real* token is the only thing that confirms the rest of the
-  envelope: the `liveactivity` push type, the `…push-type.liveactivity` topic, `attributes-type:
-  LiveActivityAttributes`, `attributes: {}`, and the JSON-stringified `content-state`. All five were
-  derived by reading expo-widgets' Swift rather than from documentation.
+- A real start push for that token returned **`{"event":"start","sent":1,"failed":0}`**.
+  ⚠️ **Corrected 2026-08-23.** This entry used to claim that a 200 for a real token confirmed the
+  whole envelope — push type, topic, `attributes-type`, `attributes: {}` and the stringified
+  `content-state`. A one-field-at-a-time probe against the real token falsified that: omitting
+  `attributes`, omitting `alert`, sending `props` as a nested object and sending
+  `attributes-type: "BundlesActivity"` **all returned 200**, while a wrong topic returned
+  `400 DeviceTokenNotForTopic` and a wrong push type `400 InvalidPushType`. A 200 proves the token,
+  the topic and the push type — no more. The four body fields are ActivityKit's to validate on the
+  device and stay unproven until the activity is photographed. See the contract's "What a 200 from
+  APNs does and does not prove".
 - **Two APNs keys**, one sandbox-only and one production-only, selected per request from the token
-  row's `environment` alongside the gateway, with a per-key JWT cache.
+  row's `environment` alongside the gateway, with a per-key JWT cache. Re-measured 2026-08-23 across
+  the full key × gateway matrix, and covered by 40 tests that run the Edge Function source itself.
+- **The APNs payload ceiling is 5,120 bytes**, above ActivityKit's 4 KB content-state limit — so an
+  oversized state is accepted by Apple and dropped silently on the phone. The function now caps its
+  own content state; before the cap, a long `display_name` made it answer `failed:1`.
 
 ### ⏳ Not yet confirmed
 On-screen rendering. APNs accepting a push proves delivery, not that ActivityKit decoded it and drew
