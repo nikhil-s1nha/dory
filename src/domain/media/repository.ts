@@ -7,7 +7,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { WIDGET_IMAGE_MAX_DIMENSION } from '@/constants/app-group';
+import { WIDGET_ASPECT_RATIO, WIDGET_IMAGE_MAX_DIMENSION } from '@/constants/app-group';
+import { centeredCropRect, isNoOpCrop } from './crop';
 import { mediaStoragePath } from './path';
 import type { MediaItem } from './types';
 
@@ -36,10 +37,21 @@ const rowToItem = (r: Row): MediaItem => ({
 const COLUMNS = 'id, couple_id, sender_id, type, storage_path, created_at, seen_at';
 
 /**
- * Downscale a captured image to a widget-safe size (≤ WIDGET_IMAGE_MAX_DIMENSION on the long edge,
- * JPEG), upload it under the couple's path, and insert the media row. Downscaling here keeps the
- * bytes small end-to-end — the widget extension has a hard 30MB ceiling, and a full-res photo would
- * blow it. Returns the created item.
+ * Crop a captured image to the widget's frame, downscale it to a widget-safe size
+ * (≤ WIDGET_IMAGE_MAX_DIMENSION on the long edge, JPEG), upload it under the couple's path, and
+ * insert the media row. Returns the created item.
+ *
+ * **Crop.** The widget centre-crops to `WIDGET_ASPECT_RATIO` on its way to the screen anyway; doing
+ * it here instead means the stored object *is* what the partner sees, so the guide the sender was
+ * shown while framing is the whole truth. It also stops us paying to upload and downscale pixels
+ * that were always going to be discarded. A drawing is already made at that ratio, so `isNoOpCrop`
+ * skips the extra pass for it.
+ *
+ * **Downscale.** The widget extension has a hard 30MB ceiling and a full-res photo would blow it, so
+ * the bytes stay small end-to-end. The bound is on the *long* edge: constraining `width` alone left
+ * a portrait capture's height oversized, which then had to be re-encoded a second time by
+ * `downloadToAppGroup`. Which edge is longer is derived from the cropped size rather than assumed,
+ * so retargeting `WIDGET_ASPECT_RATIO` to a taller family can't quietly reintroduce it.
  */
 export async function sendImage(
   supabase: SupabaseClient,
@@ -54,10 +66,26 @@ export async function sendImage(
   const id = randomUUID();
   const path = mediaStoragePath(params.coupleId, id);
 
-  // Resize so the longest edge is at most the widget max; expo-image-manipulator keeps aspect ratio.
-  const context = ImageManipulator.manipulate(params.localUri).resize({
-    width: WIDGET_IMAGE_MAX_DIMENSION,
-  });
+  // Measure before transforming: the crop rectangle is in source pixels and nothing upstream knows
+  // them. The decoded ref is then fed straight back into a new context, so the crop and the resize
+  // cost one decode and one encode between them rather than one apiece.
+  const source = await ImageManipulator.manipulate(params.localUri).renderAsync();
+  const crop = centeredCropRect(source.width, source.height, WIDGET_ASPECT_RATIO);
+  const skipCrop = isNoOpCrop(source.width, source.height, crop);
+  const width = skipCrop ? source.width : crop.width;
+  const height = skipCrop ? source.height : crop.height;
+
+  let context = ImageManipulator.manipulate(source);
+  if (!skipCrop) context = context.crop(crop);
+  // Only ever downscale. `resize({ width })` on an already-small image *enlarges* it, which costs
+  // bytes and quality to gain nothing the widget can use.
+  if (Math.max(width, height) > WIDGET_IMAGE_MAX_DIMENSION) {
+    context = context.resize(
+      width >= height
+        ? { width: WIDGET_IMAGE_MAX_DIMENSION }
+        : { height: WIDGET_IMAGE_MAX_DIMENSION },
+    );
+  }
   const rendered = await context.renderAsync();
   const result = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
 

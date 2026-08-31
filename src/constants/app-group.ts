@@ -36,6 +36,27 @@ export const APP_GROUP_IDENTIFIER = `group.${IOS_BUNDLE_IDENTIFIER}`;
 export const WIDGET_IMAGE_MAX_DIMENSION = 600;
 
 /**
+ * The shape of the widget's frame, as width / height.
+ *
+ * The widget draws every photo and drawing with `aspectRatio({contentMode:'fill'}) + clipped(true)`,
+ * so whatever isn't this ratio is cut away — and until the app knew the number, it was cut away
+ * blind: a 4:3 portrait capture rendered into a square tile keeps only a narrow centre band, which
+ * is exactly the reported "black edges on the left and right, cuts the top and bottom". Everything
+ * that has to agree with the widget's framing reads this constant — the camera crop guide, the
+ * review overlay, the drawing canvas, and the crop `sendImage` applies — so retargeting the app to
+ * a different family is this one edit.
+ *
+ * **The small widget is square (158x158pt), and small is the family actually placed on the home
+ * screen** — confirmed by photographing the device, not inferred from `app.json`, which declares all
+ * three. The others, if that ever changes:
+ *   systemMedium  338 / 158 ≈ 2.139
+ *   systemLarge   338 / 354 ≈ 0.955
+ * Points rather than pixels on purpose — it is a ratio, so the @3x scale cancels out; bounding the
+ * pixel count is `WIDGET_RENDER_MAX_DIMENSION`'s job, not this one's.
+ */
+export const WIDGET_ASPECT_RATIO = 158 / 158;
+
+/**
  * Hard cap on the long edge of any image handed to the widget extension.
  *
  * `WIDGET_IMAGE_MAX_DIMENSION` bounds what gets *uploaded*, but 1200px still decodes to roughly

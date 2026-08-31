@@ -11,12 +11,14 @@ import { randomUUID } from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SENT_FLASH_MS, SentFlash } from '@/components/sent-flash';
 import { ThemedText } from '@/components/themed-text';
+import { WIDGET_ASPECT_RATIO } from '@/constants/app-group';
 import { Spacing } from '@/constants/theme';
 import {
   beginStroke,
@@ -28,12 +30,8 @@ import {
   strokeToSvgPath,
   type DrawingState,
 } from '@/domain/drawing/state';
-import {
-  fetchMediaById,
-  getSignedUrl,
-  notifyPartnerOfSend,
-  sendImage,
-} from '@/domain/media/repository';
+import { fetchMediaById, getSignedUrl } from '@/domain/media/repository';
+import { enqueueSend } from '@/domain/media/outbox';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -45,6 +43,13 @@ const WIDTHS = [3, 8, 16];
  * with a `base` media id — the round-trip from a drawing widget/notification — the partner's drawing
  * loads as a background layer and new strokes composite on top; Send snapshots the whole canvas
  * (base + strokes) and ships it back as a new drawing via the shared media pipeline.
+ *
+ * **The canvas is the widget.** It used to be a full-screen portrait rectangle, of which the widget
+ * kept a centred slice — so a drawing was composed at one shape and displayed at another, and
+ * whatever strayed outside the slice simply never arrived. The surface is now a
+ * `WIDGET_ASPECT_RATIO` tile centred above the tools: everything drawn on it survives, because there
+ * is nothing left for the widget to crop. That also makes the round-trip exact — the base drawing
+ * was made on this same shape, so it lands over the canvas one-to-one.
  */
 export default function DrawScreen() {
   const router = useRouter();
@@ -55,7 +60,7 @@ export default function DrawScreen() {
   const [drawing, setDrawing] = useState<DrawingState>(emptyDrawing);
   const [color, setColor] = useState(PALETTE[0]);
   const [width, setWidth] = useState(WIDTHS[1]);
-  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -78,6 +83,13 @@ export default function DrawScreen() {
     };
   }, [base]);
 
+  // Leave once the receipt has been seen; the upload is already running in the outbox.
+  useEffect(() => {
+    if (!sent) return;
+    const timer = setTimeout(() => router.back(), SENT_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [sent, router]);
+
   // Touch → stroke reducers. Gesture callbacks run on the UI thread, so hop to JS to update state.
   const onStart = (x: number, y: number) => {
     setDrawing((d) => beginStroke(d, { id: randomUUID(), color, width, point: { x, y } }));
@@ -90,12 +102,16 @@ export default function DrawScreen() {
     .onUpdate((e) => runOnJS(onMove)(e.x, e.y))
     .onEnd(() => runOnJS(onEnd)());
 
+  /**
+   * Snapshot, hand to the outbox, leave. The snapshot itself has to happen here — it is the canvas —
+   * but everything after it (resize, upload, row, push) outlives this screen, so a failure surfaces
+   * through the outbox rather than a spinner nobody is watching.
+   */
   async function send() {
-    if (!profile?.coupleId || !session || isEmpty(drawing)) return;
+    if (!profile?.coupleId || !session || isEmpty(drawing) || sent) return;
     const snapshot = canvasRef.current?.makeImageSnapshot();
     const base64 = snapshot?.encodeToBase64();
     if (!base64) return;
-    setSending(true);
     try {
       // Write the snapshot to a real temp file — passing a huge data URI straight into
       // expo-image-manipulator (inside sendImage) hangs on device; a file:// URI is reliable.
@@ -103,17 +119,16 @@ export default function DrawScreen() {
       await FileSystem.writeAsStringAsync(uri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const item = await sendImage(supabase, {
+      enqueueSend(supabase, {
         coupleId: profile.coupleId,
         senderId: session.user.id,
         type: 'drawing',
         localUri: uri,
         now: Date.now(),
       });
-      await notifyPartnerOfSend(supabase, item);
-      router.back();
+      setSent(true);
     } catch (e) {
-      setSending(false);
+      // Writing the file is the one step that still happens while the user is here to see it fail.
       Alert.alert('Could not send', e instanceof Error ? e.message : String(e));
     }
   }
@@ -129,51 +144,61 @@ export default function DrawScreen() {
             <ThemedText type="link">Close</ThemedText>
           </Pressable>
           <ThemedText type="smallBold">{base ? 'Draw back' : 'Drawing'}</ThemedText>
-          <Pressable onPress={send} hitSlop={8} disabled={sending || isEmpty(drawing)}>
-            {sending ? (
-              <ActivityIndicator />
-            ) : (
-              <ThemedText type="link" style={isEmpty(drawing) && styles.disabled}>
-                Send
-              </ThemedText>
-            )}
+          <Pressable
+            onPress={() => {
+              void send();
+            }}
+            hitSlop={8}
+            disabled={sent || isEmpty(drawing)}>
+            <ThemedText type="link" style={isEmpty(drawing) && styles.disabled}>
+              Send
+            </ThemedText>
           </Pressable>
         </View>
 
-        {/* Canvas — measured via the wrapping View since Skia's Canvas has no onLayout. */}
-        <View
-          style={styles.canvasWrap}
-          onLayout={(e) => setCanvasSize(e.nativeEvent.layout)}>
-          <GestureDetector gesture={pan}>
-            <Canvas ref={canvasRef} style={styles.canvas}>
-              <Fill color="#000000" />
-              {baseImage && canvasSize.width > 0 && (
-              <SkiaImage
-                image={baseImage}
-                x={0}
-                y={0}
-                width={canvasSize.width}
-                height={canvasSize.height}
-                fit="contain"
-              />
-            )}
-            {allStrokes.map((stroke) => {
-              const path = Skia.Path.MakeFromSVGString(strokeToSvgPath(stroke.points));
-              if (!path) return null;
-              return (
-                <Path
-                  key={stroke.id}
-                  path={path}
-                  color={stroke.color}
-                  style="stroke"
-                  strokeWidth={stroke.width}
-                  strokeCap="round"
-                  strokeJoin="round"
-                />
-              );
-            })}
-            </Canvas>
-          </GestureDetector>
+        {/* The canvas is the widget tile, centred in whatever room the screen has. Measured via the
+            wrapping View since Skia's Canvas has no onLayout. */}
+        <View style={styles.stage}>
+          <View
+            style={[styles.canvasFrame, { aspectRatio: WIDGET_ASPECT_RATIO }]}
+            onLayout={(e) => setCanvasSize(e.nativeEvent.layout)}>
+            <GestureDetector gesture={pan}>
+              <Canvas ref={canvasRef} style={StyleSheet.absoluteFill}>
+                <Fill color="#000000" />
+                {baseImage && canvasSize.width > 0 && (
+                  <SkiaImage
+                    image={baseImage}
+                    x={0}
+                    y={0}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
+                    // The base was drawn (or cropped) at this very ratio, so contain and cover agree.
+                    // `contain` is the safe one of the two: a legacy drawing stored at some other
+                    // shape letterboxes rather than losing the edges the sender is replying to.
+                    fit="contain"
+                  />
+                )}
+                {allStrokes.map((stroke) => {
+                  const path = Skia.Path.MakeFromSVGString(strokeToSvgPath(stroke.points));
+                  if (!path) return null;
+                  return (
+                    <Path
+                      key={stroke.id}
+                      path={path}
+                      color={stroke.color}
+                      style="stroke"
+                      strokeWidth={stroke.width}
+                      strokeCap="round"
+                      strokeJoin="round"
+                    />
+                  );
+                })}
+              </Canvas>
+            </GestureDetector>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
+            This whole square is your partner’s widget.
+          </ThemedText>
         </View>
 
         {/* Toolbar */}
@@ -215,6 +240,7 @@ export default function DrawScreen() {
             </Pressable>
           </View>
         </View>
+        {sent ? <SentFlash /> : null}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -231,8 +257,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   disabled: { opacity: 0.35 },
-  canvasWrap: { flex: 1 },
-  canvas: { flex: 1 },
+  stage: { flex: 1, justifyContent: 'center', gap: Spacing.three, paddingHorizontal: Spacing.four },
+  // Bounded by height as well as width so a short screen shrinks the tile instead of pushing the
+  // tools off the bottom; the ratio is what must hold, not the size.
+  canvasFrame: { width: '100%', maxHeight: '86%', alignSelf: 'center', overflow: 'hidden' },
+  hint: { textAlign: 'center' },
   toolbar: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
