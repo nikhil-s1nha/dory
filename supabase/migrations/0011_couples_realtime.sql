@@ -1,0 +1,16 @@
+-- Migration 0011: let the inviting partner see their couple fill up, live.
+--
+-- Redemption is entirely one-sided in the database: partner B calls redeem_invite, which fills
+-- couples.member_b and stamps couple_id onto both profiles. Partner A's device is never told, so
+-- A sat on the pairing screen until a cold start re-read their profile.
+--
+-- The RLS half of the fix was already correct — couples_select_members (0001) lets A read the row
+-- they are member_a of, so a poll works today. What was missing is the *push*: public.couples was
+-- never added to the supabase_realtime publication, so a postgres_changes subscription on it is
+-- accepted by the client and then simply never fires. That silent no-op is the whole bug for the
+-- realtime path; the app keeps a poll as a backstop regardless.
+--
+-- REPLICA IDENTITY stays default: subscribers only need the NEW tuple (member_b becoming non-null),
+-- which an UPDATE always logs in full, and Realtime evaluates couples_select_members against that
+-- same tuple — so only the two members ever receive the event.
+alter publication supabase_realtime add table public.couples;

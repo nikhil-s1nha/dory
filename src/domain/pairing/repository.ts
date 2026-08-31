@@ -110,6 +110,28 @@ export async function findOutstandingInvite(
 }
 
 /**
+ * Has the couple's second slot been filled — i.e. has the partner redeemed the invite?
+ *
+ * This is the one question the *inviting* partner cannot answer locally: partner B's redemption
+ * writes A's `profiles.couple_id` from the server, so A's device learns nothing until it looks.
+ * A reads this row under `couples_select_members` (they are member_a), so no extra grant is
+ * needed. Throws on a read failure rather than reporting "not yet" — a caller polling this must
+ * not mistake a dropped request for a partner who hasn't arrived.
+ */
+export async function isCoupleComplete(
+  supabase: SupabaseClient,
+  coupleId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('couples')
+    .select('member_b')
+    .eq('id', coupleId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data?.member_b);
+}
+
+/**
  * Open a new couple for the current user (slot A) and mint an invite for the open slot B.
  * Two inserts: the couple, then the invite. RLS guarantees the caller can only place
  * themselves in member_a. Throws on any database error so callers surface it to the user.

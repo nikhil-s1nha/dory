@@ -2,6 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   StyleSheet,
   TextInput,
@@ -13,10 +14,16 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { describePairingError, isUniqueViolation } from '@/domain/pairing/errors';
-import { normalizeCode } from '@/domain/pairing/invite-code';
+import {
+  isEnterableCode,
+  MAX_ENTERED_CODE_LENGTH,
+  normalizeCode,
+  normalizeCodeInput,
+} from '@/domain/pairing/invite-code';
 import {
   createCoupleWithInvite,
   findOutstandingInvite,
+  isCoupleComplete,
   redeemInvite,
   type OutstandingInvite,
 } from '@/domain/pairing/repository';
@@ -37,6 +44,14 @@ const REDEEM_MESSAGES: Record<Exclude<RedeemOutcome, { ok: true }>['reason'], st
   UNKNOWN: 'Something went wrong. Try again.',
 };
 
+/**
+ * How often the inviting partner re-asks the server whether their couple filled up. Slow enough
+ * to be free (one tiny indexed read), fast enough that "my partner just tapped Pair" resolves
+ * while both people are still looking at their phones. This is only the backstop — Realtime
+ * normally beats it by seconds.
+ */
+const PARTNER_JOIN_POLL_MS = 5000;
+
 /** Best-effort second look for an invite we already own. Its own failure isn't worth reporting. */
 async function recoverOutstanding(uid: string): Promise<OutstandingInvite | null> {
   try {
@@ -49,7 +64,8 @@ async function recoverOutstanding(uid: string): Promise<OutstandingInvite | null
 /**
  * Shown to signed-in users who aren't paired yet. Two ways forward: mint an invite for your
  * partner, or enter the code they sent you. On a successful redeem we refresh the profile, which
- * flips the root gate over to the main app.
+ * flips the root gate over to the main app. The *inviting* partner gets the same flip without
+ * touching anything, via the couple-completion watcher below.
  */
 export default function PairScreen() {
   const colors = useTheme();
@@ -85,6 +101,65 @@ export default function PairScreen() {
     };
   }, [userId]);
 
+  /**
+   * The other half of pairing, from the *inviting* side.
+   *
+   * When partner B redeems A's code the whole transaction happens on the server: B's app calls
+   * redeem_invite, which fills couples.member_b and stamps couple_id onto *both* profiles. B is
+   * flipped into the app by their own refreshProfile — but nothing tells A's device anything, so
+   * A sat here on the pairing screen until they force-quit and relaunched (a cold start is what
+   * re-reads the profile).
+   *
+   * Three triggers, because each has failed on its own: a Realtime subscription (instant, but it
+   * can silently never connect on a captive/hotspot network), a slow poll (the backstop that
+   * always works), and a foreground re-check (covers the phone that was asleep in a pocket while
+   * the partner paired). All three funnel into one `check`, which only calls refreshProfile once
+   * the couple really is complete — refreshing on every tick would thrash the whole context.
+   */
+  useEffect(() => {
+    const coupleId = outstanding?.coupleId;
+    if (!coupleId) return;
+    let active = true;
+
+    const check = async () => {
+      try {
+        if (!(await isCoupleComplete(supabase, coupleId))) return;
+      } catch {
+        return; // transient read failure; the next tick asks again
+      }
+      if (!active) return;
+      await refreshProfile(); // profiles.couple_id is now set — the root gate takes this screen away
+    };
+
+    const channel = supabase
+      .channel(`couple_paired:${coupleId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'couples', filter: `id=eq.${coupleId}` },
+        () => {
+          void check();
+        },
+      )
+      .subscribe();
+
+    const poll = setInterval(() => {
+      void check();
+    }, PARTNER_JOIN_POLL_MS);
+
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void check();
+    });
+
+    void check(); // the partner may have redeemed while this screen was being loaded
+
+    return () => {
+      active = false;
+      clearInterval(poll);
+      appState.remove();
+      supabase.removeChannel(channel);
+    };
+  }, [outstanding?.coupleId, refreshProfile]);
+
   async function onCreate() {
     if (!userId) return;
     setError(null);
@@ -112,6 +187,8 @@ export default function PairScreen() {
 
   async function onRedeem() {
     setError(null);
+    // `entered` is already normalised as it is typed; normalizeCode again so the submitted string
+    // is provably the displayed one even if the field is ever fed from somewhere else.
     const code = normalizeCode(entered);
     setBusy(true);
     try {
@@ -153,6 +230,11 @@ export default function PairScreen() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
+
+  // Gate the button on the shape of the code rather than on "not empty": a half-typed code only
+  // ever buys a round-trip and a CODE_NOT_FOUND. Length is a *window*, not an equality — see
+  // isEnterableCode; an 8-character code minted before the shortening must still go through.
+  const canRedeem = isEnterableCode(entered);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -203,18 +285,27 @@ export default function PairScreen() {
                 style={[styles.input, { color: colors.text, backgroundColor: colors.background }]}
                 placeholder="Enter partner's code"
                 placeholderTextColor={colors.textSecondary}
+                // autoCapitalize only nudges the keyboard's shift key; the uppercasing that
+                // actually holds is normalizeCodeInput in onChangeText.
                 autoCapitalize="characters"
                 autoCorrect={false}
+                spellCheck={false}
+                autoComplete="off"
+                maxLength={MAX_ENTERED_CODE_LENGTH}
+                returnKeyType="go"
                 value={entered}
-                onChangeText={setEntered}
+                onChangeText={(text) => setEntered(normalizeCodeInput(text))}
+                onSubmitEditing={() => {
+                  if (canRedeem && !busy) void onRedeem();
+                }}
               />
               <Pressable
                 style={[
                   styles.button,
                   { backgroundColor: colors.text },
-                  entered.trim().length === 0 && styles.buttonDisabled,
+                  !canRedeem && styles.buttonDisabled,
                 ]}
-                disabled={busy || entered.trim().length === 0}
+                disabled={busy || !canRedeem}
                 onPress={onRedeem}>
                 {busy ? (
                   <ActivityIndicator color={colors.background} />

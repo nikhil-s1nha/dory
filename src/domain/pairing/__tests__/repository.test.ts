@@ -4,6 +4,7 @@ import {
   createCoupleWithInvite,
   fetchProfile,
   findOutstandingInvite,
+  isCoupleComplete,
   redeemInvite,
   sameProfile,
 } from '../repository';
@@ -134,6 +135,47 @@ describe('findOutstandingInvite', () => {
   it('propagates a lookup error', async () => {
     const client = makeSelectClient({ couple: { error: new Error('rls denied') } });
     await expect(findOutstandingInvite(client, 'user-a')).rejects.toThrow('rls denied');
+  });
+});
+
+/**
+ * Fake for the couples read behind isCoupleComplete: a chainable builder whose maybeSingle()
+ * resolves to one preset row.
+ */
+function makeCoupleClient(preset: {
+  data?: { member_b: string | null } | null;
+  error?: unknown;
+}) {
+  const b: Record<string, unknown> = {};
+  for (const m of ['select', 'eq']) b[m] = () => b;
+  b.maybeSingle = async () => ({ data: preset.data ?? null, error: preset.error ?? null });
+  return { from: () => b } as unknown as SupabaseClient;
+}
+
+/**
+ * The signal the *inviting* partner polls for. Partner B's redemption happens entirely on the
+ * server, so this read is the only way A's device learns that the couple filled up.
+ */
+describe('isCoupleComplete', () => {
+  it('is false while the second slot is still open', async () => {
+    expect(await isCoupleComplete(makeCoupleClient({ data: { member_b: null } }), 'c1')).toBe(false);
+  });
+
+  it('is true once the partner has taken the second slot', async () => {
+    expect(await isCoupleComplete(makeCoupleClient({ data: { member_b: 'user-b' } }), 'c1')).toBe(
+      true,
+    );
+  });
+
+  it('is false when the row is not visible at all', async () => {
+    expect(await isCoupleComplete(makeCoupleClient({ data: null }), 'c1')).toBe(false);
+  });
+
+  // A dropped request must not read as "your partner hasn't arrived" — a poll that swallowed
+  // errors would sit on the pairing screen forever and look exactly like the bug it fixes.
+  it('throws on a read failure rather than reporting an open slot', async () => {
+    const client = makeCoupleClient({ error: new Error('network down') });
+    await expect(isCoupleComplete(client, 'c1')).rejects.toThrow('network down');
   });
 });
 
