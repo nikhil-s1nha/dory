@@ -2,6 +2,49 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Backend audit — the whole Supabase side re-verified live (2026-08-31)
+
+No code changed. This entry exists because the 2026-08-23 "Still open" block asserted two things
+that a live check falsifies, and a stale blocker is more expensive than no blocker: it had this
+project believing the backend needed work before TestFlight when it did not.
+
+### Corrected
+- 🔴 **The Management API token was never dead.** `GET /v1/projects/agnslitokcyvkboiklwn` returns
+  **200**. The `401 Unauthorized` recorded on 2026-08-23 was transient, not an expired token, and
+  nothing had to be re-issued. Every check below ran on the token already in
+  `.supabase-access-token`.
+- 🔴 **The content-state cap *was* deployed.** The deployed `notify-activity` bundle
+  (`GET /functions/notify-activity/body`, v6) contains `CONTENT_STATE_MAX_BYTES`,
+  `SENDER_NAME_MAX_CHARS` and `boundContentState`. The deploy is stamped 2026-08-23T10:02:31Z; the
+  cap commit `9830a36` is stamped 2026-08-22T23:24:30Z — the deploy is *after* the commit. The
+  earlier note read the two timestamps in the wrong order.
+
+### Verified live against the cloud project
+- **All five RLS suites pass**, each returning its sentinel: `BUNDLES_RLS_OK`,
+  `BUNDLES_SHITLIST_RLS_OK`, `BUNDLES_MEDIA_RLS_OK`, `BUNDLES_PUSH_RLS_OK` (which carries the
+  device-handover trigger assertion the stale note called unre-verified) and
+  `BUNDLES_ACTIVITY_RLS_OK`.
+- **RLS is enabled on all 12 public tables.** `spotify_oauth_states` holds 0 policies *by design* —
+  RLS on with no policy is deny-all to clients, and only the service role touches it.
+- **No source-to-deploy drift in any of the five Edge Functions.** Two deploy timestamps predate
+  their last commit, and both are deploy-then-commit rather than drift, confirmed by grepping the
+  deployed bundles rather than trusting the dates: `notify-partner` (deployed 2 min before commit
+  `faa51c9`) contains `APNS_KEY_P8_PRODUCTION`, `APNS_KEY_ID_PRODUCTION` and
+  `BadEnvironmentKeyInToken`, so the dual-key fix is live; `spotify-start` and `spotify-poll`
+  (deployed 2026-07-23, first committed 2026-08-01 in `f027b71`, never modified since) match their
+  source literals. **Checking a deploy by timestamp alone would have reported drift on three
+  functions that have none.**
+- **All 15 function secrets present**, including both APNs pairs
+  (`APNS_KEY_P8`/`APNS_KEY_ID` and `APNS_KEY_P8_PRODUCTION`/`APNS_KEY_ID_PRODUCTION`).
+- **The Spotify poller is healthy**: `cron.job` 1 active on `*/2 * * * *`, and 60 of 60 runs in the
+  trailing two hours succeeded, latest 2026-08-31T12:46Z.
+- Trunk gates green at 308 tests, 27 suites: `lint`, `typecheck`, `test`.
+
+### Consequence
+The backend is not a TestFlight blocker and never was. The two real blockers are unchanged and both
+are outside Supabase: the App Store Connect app record (`POST /v1/apps` refuses by design) and
+`Settings → Developer → Enable UI Automation` on the device for the Live Activity render proof.
+
 ## Live Activity backend, verified server-side (2026-08-23)
 
 A test pass over everything in the push/backend stack that can be settled without owning the phone's
@@ -42,10 +85,12 @@ APNs status and body it measured, so a claim here can be re-run rather than beli
   inserting a row owned by someone else is `403 42501`, anonymous sees `[]`.
 
 ### Still open
-- `supabase/tests/verify_live_activity_rls_cloud.sql` could **not** be run: the Management API
+- ~~`supabase/tests/verify_live_activity_rls_cloud.sql` could **not** be run: the Management API
   personal access token in `.supabase-access-token` now returns `401 Unauthorized`. The role-switching
   half of the RLS check and the device-handover trigger assertions are therefore unre-verified since
-  2026-08-16, and the content-state cap above is **committed but not deployed**.
+  2026-08-16, and the content-state cap above is **committed but not deployed**.~~
+  **Closed 2026-08-31** — the 401 was transient and the cap was in fact already deployed. See the
+  backend audit entry at the top of this file.
 
 ## Live Activities + TestFlight infrastructure (2026-08-16)
 
