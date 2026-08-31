@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.nikhilsinha.bundles",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "appleTeamId": "K4MBJGZLNY",
       "buildNumber": "1",
       "infoPlist": {
@@ -86,6 +87,7 @@
       "./plugins/with-signing-and-versioning",
       "./plugins/with-widget-privacy-manifest",
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {
