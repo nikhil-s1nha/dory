@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 
+import { isWidgetContentType } from '@/domain/widget/stack';
 import { useAuth } from '@/lib/auth-context';
 import { registerForPushNotifications } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
@@ -77,17 +78,35 @@ export function usePush() {
       }),
     });
 
-    const refreshWidget = () => {
-      void syncWidgetOnOpen(coupleId, userId);
+    /**
+     * A push means "this specific thing just arrived", so the widget jumps straight to it rather
+     * than taking a shuffle step. Advancing here was a second, invisible source of steps — a photo
+     * landing mid-foreground announced itself by putting yesterday's drawing on the widget, and
+     * spent the step the user's next app open was going to make.
+     */
+    const refreshWidget = (data: Record<string, unknown> | undefined) => {
+      const payload = (data?.bundles ?? {}) as PushPayload;
+      void syncWidgetOnOpen(coupleId, userId, {
+        trigger: 'push',
+        advance: false,
+        // Validated, not cast. `payload` is whatever a server put in the APNs body, and an
+        // unrecognised `mediaType` reaching `show` is not inert: the sync treats a name it cannot
+        // place as "no named item", which for a renamed or malformed field would silently turn a
+        // push into a shuffle step.
+        show: isWidgetContentType(payload.mediaType) ? payload.mediaType : null,
+      });
     };
 
     const openFrom = (response: Notifications.NotificationResponse) => {
-      refreshWidget();
-      const href = routeFor(response.notification.request.content.data);
+      const data = response.notification.request.content.data;
+      refreshWidget(data);
+      const href = routeFor(data);
       if (href) router.push(href);
     };
 
-    const received = Notifications.addNotificationReceivedListener(refreshWidget);
+    const received = Notifications.addNotificationReceivedListener((notification) =>
+      refreshWidget(notification.request.content.data),
+    );
     const responded = Notifications.addNotificationResponseReceivedListener(openFrom);
 
     // Cold start: the tap that launched the app fired before this listener existed, so replay the

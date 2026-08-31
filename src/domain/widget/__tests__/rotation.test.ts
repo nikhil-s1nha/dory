@@ -1,17 +1,14 @@
-import {
-  PREVIEW_ROTATION_INTERVAL_MS,
-  nextPreviewFrame,
-} from '../rotation';
-import { INITIAL_CURSOR, type WidgetContentType } from '../stack';
+import { PREVIEW_ROTATION_INTERVAL_MS, nextPreviewFrame } from '../rotation';
+import { INITIAL_CURSOR, type WidgetContentType, type WidgetCursor } from '../stack';
 
 /** Walk `ticks` rotations from the initial cursor and collect what each frame showed. */
 function rotate(present: readonly WidgetContentType[], ticks: number): (WidgetContentType | null)[] {
   const seen: (WidgetContentType | null)[] = [];
-  let cursor = INITIAL_CURSOR;
+  let cursor: WidgetCursor = INITIAL_CURSOR;
   for (let i = 0; i < ticks; i++) {
     const frame = nextPreviewFrame(present, cursor);
-    cursor = frame.cursor;
-    seen.push(frame.item);
+    if (frame) cursor = frame;
+    seen.push(frame);
   }
   return seen;
 }
@@ -23,11 +20,11 @@ describe('PREVIEW_ROTATION_INTERVAL_MS', () => {
 });
 
 describe('nextPreviewFrame', () => {
-  it('opens on the highest-priority item, not on whatever was passed first', () => {
+  it('opens on the top of the cycle, not on whatever was passed first', () => {
     expect(rotate(['music', 'photo', 'drawing'], 1)).toEqual(['photo']);
   });
 
-  it('rotates through all three in priority order', () => {
+  it('rotates through all three in cycle order', () => {
     expect(rotate(['photo', 'drawing', 'music'], 3)).toEqual(['photo', 'drawing', 'music']);
   });
 
@@ -55,10 +52,8 @@ describe('nextPreviewFrame', () => {
     expect(rotate([], 3)).toEqual([null, null, null]);
   });
 
-  it('recovers from a stale cursor left over from a larger set', () => {
-    // The preview held 3 items, a photo expired, and the cursor now points past the end.
-    const frame = nextPreviewFrame(['drawing', 'music'], 97);
-    expect(frame.item).not.toBeNull();
-    expect(['drawing', 'music']).toContain(frame.item);
+  it('recovers from a cursor naming an item that has since gone', () => {
+    // The preview held 3 items and the photo expired while it was the one on screen.
+    expect(nextPreviewFrame(['drawing', 'music'], 'photo')).toBe('drawing');
   });
 });

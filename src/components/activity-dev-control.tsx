@@ -23,6 +23,11 @@ export const SHOW_ACTIVITY_DEV_CONTROL = __DEV__;
 /**
  * A deliberately ugly debug panel for driving the Live Activity by hand: Start, Update, End.
  *
+ * **Nothing mounts this any more.** It came off the Home screen, where it sat under the widget
+ * preview on every Debug build. Kept, not deleted, because driving an activity by hand is still the
+ * only way to exercise `domain/activity` without a push: render `<ActivityDevControl />` from
+ * whichever screen the experiment needs it on, and read the constant above first.
+ *
  * It prints the result of the last action on screen because that is the only channel that survives
  * this setup — Metro's console doesn't reliably stream here, so a failed `start` would otherwise be
  * indistinguishable from a `start` that was never tapped. A failure shows the ActivityKit error

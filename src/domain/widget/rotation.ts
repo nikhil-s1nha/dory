@@ -8,27 +8,27 @@
  * exactly where it isn't visible. See PLAN.md's M7 note for the full reasoning.
  *
  * Everything here delegates to `stack.ts`. Rotation changes *when* the item advances, never the
- * priority model or the cycling rules, and this file exists to give the cadence a named, testable
- * home rather than to restate any of that.
+ * cycle order or the cycling rules, and this file exists to give the cadence a named, testable home
+ * rather than to restate any of that.
  */
 
-import { advanceStack, type WidgetContentType } from './stack';
+import { nextInCycle, type WidgetContentType, type WidgetCursor } from './stack';
 
 /** "…rotate through the three content types every ~15 seconds" (spec 3.4). */
 export const PREVIEW_ROTATION_INTERVAL_MS = 15_000;
 
 /**
- * One rotation tick: the same advancement the home-screen widget performs per app open, applied on
- * a timer instead.
+ * One rotation tick: the same step the home-screen widget takes per app open, applied on a timer
+ * instead. Returns the item to show, which is also the cursor to carry into the next tick.
  *
- * The cursor this walks is the preview's own, held in memory for as long as the screen is mounted.
- * It must never be written back to the persisted `bundles.widget.cursor`: that key encodes M5's
- * shipped "advance one step per open" contract, and a 15-second writer would leave every subsequent
- * app open landing on an arbitrary item.
+ * That cursor is the preview's own, held in memory for as long as the screen is mounted. It must
+ * never be written back to the persisted `bundles.widget.cursor`: that key encodes the widget's
+ * "advance one step per open" contract, and a 15-second writer would leave every app open landing
+ * on an arbitrary item.
  */
 export function nextPreviewFrame(
   present: readonly WidgetContentType[],
-  cursor: number,
-): { cursor: number; item: WidgetContentType | null } {
-  return advanceStack(present, cursor);
+  lastShown: WidgetCursor,
+): WidgetContentType | null {
+  return nextInCycle(present, lastShown);
 }

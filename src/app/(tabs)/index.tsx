@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ActivityDevControl, SHOW_ACTIVITY_DEV_CONTROL } from '@/components/activity-dev-control';
 import { HomeButton } from '@/components/home-button';
 import { ThemedText } from '@/components/themed-text';
 import { WidgetPreview } from '@/components/widget-preview';
@@ -16,6 +15,14 @@ import { Spacing } from '@/constants/theme';
  * Below the grid sits the live widget preview, which rotates through the partner's photo, drawing
  * and music every 15 seconds — spec 3.4's stretch goal. It's placed under the grid so the specified
  * composition (title, then the 2x2 with its cross channel) is still the first thing you see.
+ *
+ * The Live Activity dev panel used to sit under the preview. It is off Home for good — a yellow
+ * debug box under the one piece of product UI on this screen, on every Debug build. The component
+ * and its trigger module are intact (`src/components/activity-dev-control.tsx`,
+ * `src/domain/activity/dev-trigger.ts`): to drive an activity by hand again, render
+ * `<ActivityDevControl />` from wherever the experiment lives — note `SHOW_ACTIVITY_DEV_CONTROL` is
+ * `__DEV__`, and this project installs Release builds to the phone, so read that file's warning
+ * first.
  */
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,12 +48,6 @@ export default function HomeScreen() {
         <View style={styles.preview}>
           <WidgetPreview />
         </View>
-
-        {SHOW_ACTIVITY_DEV_CONTROL ? (
-          <View style={styles.devControl}>
-            <ActivityDevControl />
-          </View>
-        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -60,5 +61,4 @@ const styles = StyleSheet.create({
   grid: { gap: Spacing.three },
   row: { flexDirection: 'row', gap: Spacing.three },
   preview: { marginTop: Spacing.five },
-  devControl: { marginTop: Spacing.three },
 });

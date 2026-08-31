@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { INITIAL_CURSOR, type WidgetContentType } from '@/domain/widget/stack';
+import { INITIAL_CURSOR, type WidgetContentType, type WidgetCursor } from '@/domain/widget/stack';
 import { PREVIEW_ROTATION_INTERVAL_MS, nextPreviewFrame } from '@/domain/widget/rotation';
 import { useAuth } from '@/lib/auth-context';
 import { buildProps, loadStackSnapshot } from '@/lib/widget-sync';
@@ -31,7 +31,7 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
   const [present, setPresent] = useState<WidgetContentType[]>([]);
   const [props, setProps] = useState<BundlesWidgetProps | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const cursor = useRef(INITIAL_CURSOR);
+  const cursor = useRef<WidgetCursor>(INITIAL_CURSOR);
 
   // Load (and reload on foreground) what the partner currently has waiting.
   useEffect(() => {
@@ -48,14 +48,13 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
         );
         if (cancelled) return;
 
-        cursor.current = INITIAL_CURSOR;
         setFrames(Object.fromEntries(built));
         setPresent(snapshot.present);
 
-        // Show the top-priority item immediately rather than an empty box for 15 seconds.
+        // Show the top of the cycle immediately rather than an empty box for 15 seconds.
         const first = nextPreviewFrame(snapshot.present, INITIAL_CURSOR);
-        cursor.current = first.cursor;
-        setProps(first.item ? (Object.fromEntries(built)[first.item] ?? null) : { kind: 'empty' });
+        cursor.current = first;
+        setProps(first ? (Object.fromEntries(built)[first] ?? null) : { kind: 'empty' });
       } catch {
         // Keep whatever the preview was already showing — a failed refresh shouldn't blank content
         // that's still perfectly good. But if we've never shown anything, fall back to the empty
@@ -83,8 +82,8 @@ export function useWidgetPreview(): { props: BundlesWidgetProps | null; isLoadin
 
     const tick = () => {
       const frame = nextPreviewFrame(present, cursor.current);
-      cursor.current = frame.cursor;
-      if (frame.item) setProps(frames[frame.item] ?? null);
+      cursor.current = frame;
+      if (frame) setProps(frames[frame] ?? null);
     };
 
     let interval: ReturnType<typeof setInterval> | null = setInterval(

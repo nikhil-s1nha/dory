@@ -1,4 +1,4 @@
-import { Host, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { Host, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   aspectRatio,
   clipped,
@@ -6,12 +6,15 @@ import {
   font,
   foregroundStyle,
   frame,
+  lineLimit,
+  minimumScaleFactor,
   padding,
   resizable,
 } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { WIDGET_ASPECT_RATIO } from '@/constants/app-group';
 import { parseWidgetDeepLink } from '@/domain/widget/deep-link';
 import { useWidgetPreview } from '@/hooks/use-widget-preview';
 
@@ -21,8 +24,10 @@ import type { BundlesWidgetProps } from '../../widgets/bundles-widget';
  * An in-app rendering of the home-screen widget, rotating through the partner's photo, drawing and
  * music every 15 seconds (spec 3.4's stretch goal, in-app-preview form).
  *
- * It mirrors `widgets/bundles-widget.tsx` deliberately, using the same @expo/ui SwiftUI components
- * against the same downscaled App Group files, so what you see here is what the widget shows. It
+ * It mirrors `widgets/bundles-widget.tsx` deliberately — including the music card's vertical layout,
+ * which exists because the real widget is a square `systemSmall` tile — using the same @expo/ui
+ * SwiftUI components against the same downscaled App Group files, so what you see here is what the
+ * home screen shows. It
  * cannot literally *reuse* that component: babel rewrites a `'widget'`-directive function into a
  * string for the widget runtime, so `BundlesWidget` isn't a callable component in the app bundle.
  *
@@ -91,35 +96,47 @@ function PreviewContent(props: BundlesWidgetProps) {
 
   if (props.kind === 'music' && props.title) {
     return (
-      <HStack modifiers={[padding({ all: 12 })]}>
+      <VStack alignment="leading" spacing={2} modifiers={[padding({ all: 12 })]}>
         {props.imageFile ? (
           <Image
             uiImage={props.imageFile}
-            modifiers={[resizable(), frame({ width: 56, height: 56 }), clipShape('roundedRectangle', 8)]}
+            modifiers={[resizable(), frame({ width: 76, height: 76 }), clipShape('roundedRectangle', 10)]}
           />
-        ) : null}
-        <VStack modifiers={[padding({ leading: 10 })]}>
-          <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>
-            {props.title}
+        ) : (
+          <Text modifiers={[font({ size: 12 }), foregroundStyle(MUTED), lineLimit(2)]}>
+            {props.caption ?? 'Now playing'}
           </Text>
-          {props.subtitle ? (
-            <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED)]}>{props.subtitle}</Text>
-          ) : null}
-          <Spacer />
-          {props.caption ? (
-            <Text modifiers={[font({ size: 12 }), foregroundStyle(MUTED)]}>{props.caption}</Text>
-          ) : null}
-        </VStack>
+        )}
         <Spacer />
-      </HStack>
+        <Text
+          modifiers={[
+            font({ size: 15, weight: 'semibold' }),
+            foregroundStyle(TEXT),
+            lineLimit(1),
+            minimumScaleFactor(0.7),
+          ]}>
+          {props.title}
+        </Text>
+        {props.subtitle ? (
+          <Text
+            modifiers={[
+              font({ size: 13 }),
+              foregroundStyle(MUTED),
+              lineLimit(1),
+              minimumScaleFactor(0.8),
+            ]}>
+            {props.subtitle}
+          </Text>
+        ) : null}
+      </VStack>
     );
   }
 
   return (
-    <VStack modifiers={[padding({ all: 16 })]}>
+    <VStack alignment="leading" modifiers={[padding({ all: 16 })]}>
       <Spacer />
       <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(TEXT)]}>Bundles</Text>
-      <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED)]}>
+      <Text modifiers={[font({ size: 13 }), foregroundStyle(MUTED), lineLimit(3)]}>
         Open to see what your partner is up to.
       </Text>
       <Spacer />
@@ -131,11 +148,13 @@ function PreviewContent(props: BundlesWidgetProps) {
 const LOADING_TINT = '#AEAEB2';
 
 const styles = StyleSheet.create({
-  // A systemMedium widget is 338×158pt on most phones; matching that ratio is what makes this read
-  // as "your widget" rather than as a card that happens to hold a photo.
+  // Matching the real widget's shape is what makes this read as "your widget" rather than as a card
+  // that happens to hold a photo — and the ratio has to come from the constant, not a literal here:
+  // it is the same number the camera crop guide, the drawing canvas and the upload crop use, so a
+  // literal would silently disagree with the frame the photo was actually cropped to.
   frame: {
     width: '100%',
-    aspectRatio: 338 / 158,
+    aspectRatio: WIDGET_ASPECT_RATIO,
     borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: '#000000',
