@@ -2,6 +2,84 @@
 
 Per-milestone record of what was built and what was **verified**. See `PLAN.md` for the plan.
 
+## Testing-feedback pass — eleven reported defects (2026-09-01)
+
+Eleven items reported from real use. All eleven are implemented; what each was *verified* by is
+recorded per item, because on this project "tests pass" has repeatedly not meant "works on the
+phone" — and this pass found four defects that only pixels showed.
+
+### Root causes worth keeping
+- 🔴 **The shuffle advanced a variable number of times per app open.** iOS resigns active for
+  anything that puts UI over the app — Control Centre, the notification shade, the app switcher —
+  and each returns as an `AppState` 'active'. Every one of those spent a step. With the photo +
+  drawing pair actually tested, `(n+2) % 2 === n`, so two advances per return read as "nothing
+  changed" and an odd count read as "sometimes it does". Only `background -> active` advances now.
+  Four more ways a step went missing are pinned by tests in `use-widget-sync.test.ts`.
+- 🔴 **`public.couples` was never in the `supabase_realtime` publication.** The inviting partner sat
+  on the Pair screen until a cold start. The RLS was already correct; a `postgres_changes`
+  subscription on a table outside the publication is accepted by the client and then silently never
+  fires. Migration `0011_couples_realtime.sql`.
+- 🔴 **The app never showed what the widget keeps.** The camera captures 4:3, the placed widget is a
+  square `systemSmall` tile, and the crop happened invisibly after the fact. `WIDGET_ASPECT_RATIO`
+  is now the single definition of that shape, used by the crop guide, the drawing canvas, the upload
+  crop and the in-app preview alike.
+- 🔴 **No `SafeAreaProvider` at the root.** React Navigation supplies one around the navigator, so
+  screens inside the tabs were fine and the omission went unnoticed for the whole project — until a
+  `fullScreenModal` needed it and the media viewer's close button rendered on top of the status-bar
+  clock.
+
+### Verified on the physical iPhone (props, over the wireless tunnel)
+- **Shuffle advances exactly one step per foreground.** Cold start then four background->foreground
+  cycles, reading `_syncCount` / `_cursor` out of the App Group plist each time: 3 `none->photo`,
+  4 `photo->drawing`, 5 `drawing->photo`, 6 `photo->drawing`, 7 `drawing->photo`. No double-advance,
+  no consumed step.
+- **App Group write, image budget and deep link.** `_imageDebug: "600x600 1.4MB kept"` — square and
+  well inside the 4.0MB ceiling — with `deepLink: bundles://media/<id>`.
+- **Why the widget looked empty.** `_source: "media=3 partner=0 music=no"`. The widget shows only
+  what the *partner* sent, and every item in the couple was the viewer's own, so `present` was empty
+  and there was nothing to shuffle. Not a bug; worth knowing before diagnosing one.
+
+### Verified on the simulator (pixels, in-app screens)
+- Sign in with Apple is the primary action; the email form folds behind a link.
+- Invite code is 6 characters; typing `kmpt47` displays `KMPT47`; Pair gates on length.
+- **One pairs, both go through**: the inviter's Pair screen moved itself into the app ~12s after a
+  second account redeemed, with nothing tapped and no relaunch.
+- **The send does not hold the screen**: Send tapped 16:49:14.4, screen dismissing by 16:49:16.1,
+  row created 16:49:16.65 — the screen left before the upload finished, and the upload still landed.
+- Crop guide measured in pixels: keep-region hairlines 1179 x 1178 px, aspect 1.001.
+- Drawing canvas is a square captioned "This whole square is your partner's widget".
+- Music card: album art top, title and artist along the bottom.
+- Cold-start `bundles://media/<id>` with no history: close button clear of the status bar, and it
+  lands on Home.
+- The Live Activity dev panel is off Home.
+
+### Found only by looking (fixed, in `6241fa9`)
+- The widget preview was `width: '100%'` with a square ratio, so it ran under the tab bar. It draws
+  at 158pt now — the real size of a `systemSmall` tile.
+- The drawing toolbar's width dots and Clear were hardcoded white, invisible in light mode once the
+  canvas stopped filling the screen with black.
+- The media viewer's close button sat on the status-bar clock (the `SafeAreaProvider` cause above).
+
+### Signing
+Sign in with Apple needed `APPLE_ID_AUTH` on the App ID. Added via the App Store Connect API — it
+requires a configuration (`PRIMARY_APP_CONSENT`), and the bare request 409s with "Please select at
+least one configuration". That alone was not enough: `xcodebuild` reuses a cached team provisioning
+profile, and the API's capability listing reads empty for Xcode-managed App IDs, so it looked like
+the capability had not landed when it had. Removing the stale cached profile and rebuilding with
+`-allowProvisioningUpdates` regenerated it with `applesignin`. No Xcode GUI needed.
+
+### Still unverified
+- **The Apple sign-in round trip itself.** The button renders; a real authorization needs a device
+  and an Apple ID.
+- **Every rendered widget pixel.** XCUITest's automation handshake times out on a wirelessly
+  connected device ("Timed out while enabling automation mode"), so `tools/widget-shot/` cannot run
+  without a USB cable. Photo framing on the real tile, and the music card's `minimumScaleFactor`
+  behaviour on a long title, are unconfirmed — the in-app preview truncates, SwiftUI may not.
+- **A real camera capture through the crop.** Simulators have no camera; only the guide's geometry
+  is verified.
+- **The outbox has no durable queue.** A send lost to an app kill mid-upload is gone, while the UI
+  has already flashed "Sent". Not in the reported list; worth its own fix.
+
 ## Backend audit — the whole Supabase side re-verified live (2026-08-31)
 
 No code changed. This entry exists because the 2026-08-23 "Still open" block asserted two things
