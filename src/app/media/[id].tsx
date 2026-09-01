@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -30,6 +30,7 @@ export default function MediaViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
+  const insets = useSafeAreaInsets();
   const [url, setUrl] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading');
 
@@ -121,8 +122,12 @@ export default function MediaViewScreen() {
         )}
       </Animated.View>
 
-      {/* Outside the draggable layer so it never slides away from under the user's thumb. */}
-      <SafeAreaView style={styles.bar} edges={['top']} pointerEvents="box-none">
+      {/* Outside the draggable layer so it never slides away from under the user's thumb.
+          The inset is applied by hand rather than with `SafeAreaView edges={['top']}`: this bar is
+          absolutely positioned, and the native safe-area view resolves to zero padding there, which
+          put the button on top of the status-bar clock. `useSafeAreaInsets` reports the real 59pt
+          in the same place, so use the number directly. */}
+      <View style={[styles.bar, { paddingTop: insets.top + Spacing.two }]} pointerEvents="box-none">
         <Pressable
           onPress={dismiss}
           hitSlop={16}
@@ -134,7 +139,7 @@ export default function MediaViewScreen() {
               white-on-white is how this control became "basically unaccessible". */}
           <SymbolView name="xmark" tintColor="#FFFFFF" size={17} weight="bold" type="monochrome" />
         </Pressable>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -153,7 +158,7 @@ const styles = StyleSheet.create({
   onDark: { color: '#fff' },
   // Clear of the status bar and the Dynamic Island: `edges={['top']}` handles the inset, and the
   // extra padding keeps the circle from sitting flush against it.
-  bar: { position: 'absolute', top: 0, left: 0, right: 0, padding: Spacing.three },
+  bar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: Spacing.three },
   close: {
     width: 44,
     height: 44,

@@ -144,6 +144,15 @@ function PreviewContent(props: BundlesWidgetProps) {
   );
 }
 
+/**
+ * On-screen size of the preview tile, in points.
+ *
+ * A `systemSmall` widget is 158x158pt on a 6.1" iPhone (a little larger on a Max, a little smaller
+ * on a mini). Hard-coding the common case keeps the preview at roughly life size, which is the whole
+ * claim this component makes — that what you see here is what the widget shows.
+ */
+const WIDGET_PREVIEW_SIZE = 158;
+
 /** The muted grey the widget itself uses for secondary text — the frame is always dark. */
 const LOADING_TINT = '#AEAEB2';
 
@@ -153,7 +162,13 @@ const styles = StyleSheet.create({
   // it is the same number the camera crop guide, the drawing canvas and the upload crop use, so a
   // literal would silently disagree with the frame the photo was actually cropped to.
   frame: {
-    width: '100%',
+    // Sized like the real tile, not stretched across the screen. At `width: '100%'` a square ratio
+    // made the preview as tall as the phone is wide, which ran it under the tab bar — and a widget
+    // that overflows its own screen is not a preview of anything. A systemSmall widget is 158pt on
+    // this class of iPhone, so drawing it at that size is both the honest scale and one that fits.
+    width: WIDGET_PREVIEW_SIZE,
+    maxWidth: '100%',
+    alignSelf: 'center',
     aspectRatio: WIDGET_ASPECT_RATIO,
     borderRadius: 22,
     overflow: 'hidden',

@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useDeepLinkReplay } from '@/hooks/use-deep-link-replay';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -60,10 +61,21 @@ function RootNavigator() {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
-    </ThemeProvider>
+    /*
+     * `SafeAreaProvider` has to be the outermost wrapper, above the navigator.
+     *
+     * React Navigation installs its own compat provider around a navigator, so screens *inside*
+     * the tabs got sensible insets and the omission went unnoticed. A `fullScreenModal` is
+     * presented outside that subtree: `useSafeAreaInsets` returned 0 there, so the media viewer's
+     * `edges={['top']}` did nothing and its close button rendered on top of the status-bar clock —
+     * the "no way out" screen, still hard to hit even after the control itself was fixed.
+     */
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

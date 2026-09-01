@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SENT_FLASH_MS, SentFlash } from '@/components/sent-flash';
 import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
 import { WIDGET_ASPECT_RATIO } from '@/constants/app-group';
 import { Spacing } from '@/constants/theme';
 import {
@@ -52,6 +53,7 @@ const WIDTHS = [3, 8, 16];
  * was made on this same shape, so it lands over the canvas one-to-one.
  */
 export default function DrawScreen() {
+  const colors = useTheme();
   const router = useRouter();
   const { base } = useLocalSearchParams<{ base?: string }>();
   const { session, profile } = useAuth();
@@ -202,7 +204,7 @@ export default function DrawScreen() {
         </View>
 
         {/* Toolbar */}
-        <View style={styles.toolbar}>
+        <View style={[styles.toolbar, { borderTopColor: colors.backgroundElement }]}>
           <View style={styles.swatches}>
             {PALETTE.map((c) => (
               <Pressable
@@ -223,9 +225,8 @@ export default function DrawScreen() {
                 style={styles.widthBtn}>
                 <View
                   style={[
-                    styles.widthDot,
                     { width: w + 4, height: w + 4, borderRadius: (w + 4) / 2 },
-                    width !== w && styles.widthDotInactive,
+                    { backgroundColor: colors.text, opacity: width === w ? 1 : 0.4 },
                   ]}
                 />
               </Pressable>
@@ -234,7 +235,7 @@ export default function DrawScreen() {
               onPress={() => setDrawing((d) => clear(d))}
               hitSlop={6}
               style={styles.clearBtn}>
-              <ThemedText type="small" style={styles.clearText}>
+              <ThemedText type="small" themeColor="textSecondary">
                 Clear
               </ThemedText>
             </Pressable>
@@ -267,7 +268,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     gap: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   swatches: { flexDirection: 'row', justifyContent: 'center' },
   // 40px tap target wrapping a smaller visible swatch; active shows a subtle ring.
@@ -289,8 +289,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  widthDot: { backgroundColor: '#FFFFFF' },
-  widthDotInactive: { backgroundColor: 'rgba(255,255,255,0.4)' },
   clearBtn: {
     marginLeft: Spacing.two,
     height: 40,
@@ -298,5 +296,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearText: { color: 'rgba(255,255,255,0.6)' },
 });
