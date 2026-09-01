@@ -40,7 +40,7 @@ pixels is what "verified" means here.
 ## Commits
 
 - One commit per verified unit of work, with lint/typecheck/test green — never a whole milestone in one, never a red gate.
-- Conventional format: `feat/fix/chore(scope): summary`. Work on `expoApproach`; `main` is an empty root commit and stays clean.
+- Conventional format: `feat/fix/chore(scope): summary`. Work on `expoApproach`. `main` tracks it (fast-forwarded 2026-09-01) and is the repo's default branch — it was never the empty root commit this file used to claim; PRs #2-#4 had been merging into it all along.
 
 ## Build / environment gotchas
 
